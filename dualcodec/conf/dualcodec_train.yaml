@@ -25,6 +25,6 @@ trainer:
     train:
       max_steps: 1000000
       save_checkpoint_stride:
-        - 20000
+        - 200
       keep_last: [1]
       disable_mixed_precision: true

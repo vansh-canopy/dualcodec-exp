@@ -2,8 +2,11 @@
 #
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+import os
 
 from datasets import load_dataset, IterableDataset
+from tqdm import tqdm
+from datasets import concatenate_datasets
 
 path = "DE/*.tar"  # only for testing. please use full data
 
@@ -18,7 +21,25 @@ class EmiliaDataset(IterableDataset):
                 streaming=True,
             )
         else:
-            self.dataset = load_dataset("amphion/Emilia-Dataset", streaming=True)['train']
+            # self.dataset = load_dataset("amphion/Emilia-Dataset", streaming=True)['train']
+
+            local_dir = "/workspace/emilia_dataset/Emilia/EN"
+            tar_paths = [f"EN-B00000{i}.tar" for i in range(0, 10)]
+            max_shards = 10
+            language = "EN"
+            ds_list = []
+
+            for i, tar_path in enumerate(tqdm(tar_paths[:max_shards], desc="Loading shards"), start=1):
+                rel_path = os.path.relpath(tar_path, start=local_dir)
+                print(f"Loading shard {i}/{max_shards}: {rel_path}")
+                ds = load_dataset(
+                    local_dir,
+                    data_files={language.lower(): tar_path},
+                    split=language.lower()
+                )
+                ds_list.append(ds)
+
+            self.dataset = concatenate_datasets(ds_list)
         # self.dataset = self.dataset.map(lambda x: x, remove_columns=["text", "text_id"])
         # self.dataset.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
         # self.dataset = self.dataset.train_test_split(test_size=0.1)

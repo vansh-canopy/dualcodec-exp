@@ -38,6 +38,8 @@ class Trainer(BaseTrainer):
         """
         super().__init__(args, cfg)
         torch.backends.cudnn.benchmark = True
+        # Flag to indicate this trainer handles its own backward passes
+        self.codec_trainer_handles_backward = True
 
         from .loss import GANLoss, MelSpectrogramLoss, MultibandMelSpectrogramLoss
 
@@ -302,7 +304,7 @@ class Trainer(BaseTrainer):
         )
         # print(metrics)
 
-        return None, metrics
+        return total_loss, metrics
 
     def _load_model(
         self,

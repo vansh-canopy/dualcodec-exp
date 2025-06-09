@@ -29,7 +29,7 @@ cfg:
   discriminator_model: ${model.discriminator}
   train:
     gradient_accumulation_step: 1
-    find_unused_parameters: false
+    find_unused_parameters: true
     tracker: wandb
     max_epoch: 1000
     save_checkpoint_stride: 

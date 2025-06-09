@@ -482,12 +482,16 @@ class BaseTrainer(object):
                         ):
                             print(f"ignoring outlier loss with value {loss.item()}")
                             continue
-                    self.accelerator.backward(loss)
+                    # Skip backward pass for codec trainer since it handles its own backward passes
+                    if not hasattr(self, 'codec_trainer_handles_backward') or not self.codec_trainer_handles_backward:
+                        self.accelerator.backward(loss)
                     backward_time = time.time()
                     if self.accelerator.sync_gradients:
-                        self.accelerator.clip_grad_norm_(self.model.parameters(), 1.0)
-                    self.optimizer.step()
-                    self.optimizer.zero_grad()
+                        if not hasattr(self, 'codec_trainer_handles_backward') or not self.codec_trainer_handles_backward:
+                            self.accelerator.clip_grad_norm_(self.model.parameters(), 1.0)
+                    if not hasattr(self, 'codec_trainer_handles_backward') or not self.codec_trainer_handles_backward:
+                        self.optimizer.step()
+                        self.optimizer.zero_grad()
                     optimizer_step_time = time.time()
                 else:
                     loss = 0.0
@@ -514,8 +518,9 @@ class BaseTrainer(object):
                     # if self.step == self.max_steps:
                     #     exit(0)
                 if self.accelerator.is_main_process:
+                    # Print loss every step
+                    self.logger.info(f"Step {self.step}: Loss: {loss:.6f}, Running Avg Loss: {ema_loss:.5f}")
                     if self.step % 200 == 0:
-                        self.logger.info(f"Running Avg Loss: {ema_loss:.5f}")
                         # self.log(get_memory_usage(), step=self.step)
                         self.log(get_gpu_memory_usage(), step=self.step)
                         try:

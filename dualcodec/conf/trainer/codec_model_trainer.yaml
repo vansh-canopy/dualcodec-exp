@@ -1,4 +1,3 @@
-
 sample_rate: 24000
 max_tokens: 15000
 
@@ -30,7 +29,7 @@ cfg:
   discriminator_model: ${model.discriminator}
   train:
     gradient_accumulation_step: 1
-    find_unused_parameters: true
+    find_unused_parameters: false
     tracker: wandb
     max_epoch: 1000
     save_checkpoint_stride: 
@@ -38,9 +37,9 @@ cfg:
     keep_last: [1]
     run_eval: true
     dataloader:
-      num_worker: 0
-      pin_memory: false
-      persistent_workers: false
+      num_worker: 4
+      pin_memory: true
+      persistent_workers: true
     use_dynamic_batchsize: true
     optimizer:
       _target_: torch.optim.AdamW

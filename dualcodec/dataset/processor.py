@@ -178,13 +178,11 @@ def gluster_opener(
     for epoch in range(num_epochs):
         # Iterate through samples in the dataset
         for i, sample in enumerate(data):
-            # Distributed sampling: only handle samples that match the current process
-            if manual_dist_sampler and (i % world_size != rank):
-                print(
-                    f"[Rank {rank}] Skipping sample {i} in epoch {epoch} (not assigned to this process)."
-                )
-                continue
-
+            # Skip samples that don't belong to this process when using manual distributed sampling
+            if manual_dist_sampler and dist.is_initialized():
+                if i % world_size != rank:
+                    continue
+            
             # Create a new sample dictionary with the necessary modifications
             new_sample = copy.deepcopy(sample["src"])
 

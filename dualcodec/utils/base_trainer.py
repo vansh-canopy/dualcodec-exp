@@ -431,10 +431,6 @@ class BaseTrainer(object):
                 "Time/load audio": batch["load_audio_time"],
             }
             self.log(stats, step=self.step)
-            if stats["Time/load batch"] > 0.6:
-                print(
-                    f'{self.accelerator.process_index} load batch time too long, took {stats["Time/load batch"]}s'
-                )
 
             # update learning rate
             lr = self.get_lr(self.step)

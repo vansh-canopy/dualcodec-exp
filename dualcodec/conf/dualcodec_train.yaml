@@ -1,7 +1,7 @@
 defaults:
   - data: emilia_hf_raw_audio_static_batch
   - machine: devbox
-  - model: dualcodec_25hz_16384_1024_12vq
+  - model: dualcodec_12hz_16384_4096_8vq
   - trainer: codec_model_trainer
   - _self_
 hydra:
@@ -9,9 +9,9 @@ hydra:
     dir: ${machine.log_dir}/${trainer.exp_name}
 
 trainer:
-  exp_name: dualcodec_25hz_16384_1024
+  exp_name: dualcodec_12hz_16384_4096_8vq_scratch
   max_tokens: 2000
-  batch_size: 3
+  batch_size: 48
   # args:
   #   resume: true
   #   reset_steps: true

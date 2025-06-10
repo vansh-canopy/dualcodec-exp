@@ -2,7 +2,7 @@ import dualcodec
 import torch
 
 w2v_path = "./w2v-bert-2.0" # your downloaded path
-dualcodec_model_path = "./output_checkpoints/dualcodec_25hz_16384_1024/checkpoint/epoch-0000_step-0002800_loss-135.952698-dualcodec_25hz_16384_1024/" # your downloaded path
+dualcodec_model_path = "./output_checkpoints/dualcodec_25hz_16384_1024/checkpoint/epoch-0001_step-0015600_loss-93.576569-dualcodec_25hz_16384_1024" # your downloaded path
 model_id = "25hz_v1" # select from available Model_IDs, "12hz_v1" or "25hz_v1"
 
 dualcodec_model = dualcodec.get_model(model_id, dualcodec_model_path)

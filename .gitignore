@@ -3,3 +3,4 @@ output_checkpoints/
 *.pyc
 *.safetensors
 *.pt
+.venv

@@ -23,9 +23,9 @@ class EmiliaDataset(IterableDataset):
         else:
             # self.dataset = load_dataset("amphion/Emilia-Dataset", streaming=True)['train']
 
-            local_dir = "/workspace/emilia_dataset/Emilia/EN"
-            tar_paths = [f"EN-B00000{i}.tar" for i in range(0, 10)]
-            max_shards = 10
+            local_dir = "../emilia_dataset/Emilia/EN"
+            tar_paths = [filename for filename in os.listdir(local_dir) if filename.endswith(".tar")]
+            max_shards = 500
             language = "EN"
             ds_list = []
 

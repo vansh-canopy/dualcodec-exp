@@ -11,7 +11,7 @@ hydra:
 trainer:
   exp_name: dualcodec_12hz_16384_4096_8vq_scratch
   max_tokens: 2000
-  batch_size: 128
+  batch_size: 10
   # args:
   #   resume: true
   #   reset_steps: true
@@ -23,7 +23,7 @@ trainer:
     lambda_distill_loss: 15.0
     add_semantic_spec_loss: true
     train:
-      max_steps: 1000000
+      max_steps: 400000
       save_checkpoint_stride:
         - 200
       keep_last: [1]

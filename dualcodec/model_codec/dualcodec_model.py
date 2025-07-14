@@ -65,6 +65,8 @@ class DualCodec(nn.Module):
             sample_rate,
             distill_projection_out_dim,
             distill=False,
+            convnext_causal=True,
+            dac_causal=True,
         )
         self.decode_semantic_for_codec = decode_semantic_for_codec
         self.encoder_rates = encoder_rates

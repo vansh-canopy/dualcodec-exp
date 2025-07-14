@@ -4,7 +4,7 @@ dataloader:
   _target_: torch.utils.data.DataLoader
   dataset: ${..datalist}
   batch_size: null
-  num_workers: 18
+  num_workers: 0  # Set to 0 to avoid torchcodec multi-processing issues
   # prefetch_factor: 20
 
 gluster_opener:
@@ -90,7 +90,7 @@ w2v_feature:
 
 dataset:
   _target_: dualcodec.dataset.emilia_hf.EmiliaDataset
-  is_debug: false
+  is_debug: true
 
 datalist_tmp: 
   _target_: dualcodec.dataset.dataset.DataList

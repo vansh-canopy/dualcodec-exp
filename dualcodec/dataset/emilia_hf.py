@@ -16,16 +16,16 @@ class EmiliaDataset(IterableDataset):
         if is_debug:
             self.dataset = load_dataset(
                 "amphion/Emilia-Dataset",
-                data_files={"de": "DE/*.tar"},
-                split="de",
+                # data_files={"de": "DE/*.tar"},
+                split="train",
                 streaming=True,
             )
         else:
             # self.dataset = load_dataset("amphion/Emilia-Dataset", streaming=True)['train']
 
-            local_dir = "../emilia_dataset/Emilia/EN"
+            local_dir = "/mnt/disks/emilia/emilia_dataset/Emilia/EN"
             tar_paths = [filename for filename in os.listdir(local_dir) if filename.endswith(".tar")]
-            max_shards = 500
+            max_shards = 2
             language = "EN"
             ds_list = []
 

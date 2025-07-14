@@ -2,7 +2,7 @@ sample_rate: 24000
 max_tokens: 15000
 
 num_epochs: 10
-batch_size: 32
+batch_size: 16
 
 exp_name: audio_codec_trainer
 args:

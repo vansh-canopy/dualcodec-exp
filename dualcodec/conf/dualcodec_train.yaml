@@ -11,7 +11,7 @@ hydra:
 trainer:
   exp_name: dualcodec_experiments_stream
   max_tokens: 2000
-  batch_size: 32
+  batch_size: 16
   # args:
   #   resume: true
   #   reset_steps: true

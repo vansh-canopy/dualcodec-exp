@@ -27,7 +27,7 @@ from .cnn import ConvNeXtBlock
 def init_weights(m):
     if isinstance(m, nn.Conv1d):
         nn.init.trunc_normal_(m.weight, std=0.02)
-        nn.init.constant_(m.bias, 0)
+        nn.init.constant_(m.bias, 0)   # type: ignore
 
 
 def pad_to_length(x, length, pad_value=0):
@@ -46,22 +46,54 @@ def pad_to_length(x, length, pad_value=0):
     return x_padded
 
 
-class ResidualUnit(nn.Module):
-    def __init__(self, dim: int = 16, dilation: int = 1):
+import torch.nn.functional as F
+from torch import nn
+from torch.nn.utils import weight_norm
+
+
+class CausalWNConv1d(nn.Module):
+    def __init__(self, *args, **kwargs):
         super().__init__()
-        pad = ((7 - 1) * dilation) // 2
+        kwargs = dict(kwargs)
+        self.conv = weight_norm(nn.Conv1d(*args, **kwargs))
+        self.add_module("conv", self.conv) # so params show up in .named_parameters()
+
+
+    @property
+    def kernel_size(self):
+        return self.conv.kernel_size
+    @property
+    def dilation(self):
+        return self.conv.dilation
+
+    def forward(self, x):
+        k, d = self.kernel_size[0], self.dilation[0]
+        left_pad = (k - 1) * d
+        x = F.pad(x, (left_pad, 0))        
+        return self.conv(x)                
+
+
+class ResidualUnit(nn.Module):
+    def __init__(self, dim: int = 16, dilation: int = 1, is_causal: bool = False):
+        super().__init__()
+        
+        if is_causal:
+            UseConv = CausalWNConv1d
+            pad = 0
+        else:
+            UseConv = WNConv1d
+            pad = (dilation * (7 - 1) ) // 2
+    
+
         self.block = nn.Sequential(
             Snake1d(dim),
-            WNConv1d(dim, dim, kernel_size=7, dilation=dilation, padding=pad),
+            UseConv(dim, dim, dilation=dilation, kernel_size=7, padding=pad),
             Snake1d(dim),
-            WNConv1d(dim, dim, kernel_size=1),
+            UseConv(dim, dim, kernel_size=1),
         )
 
     def forward(self, x):
-        y = self.block(x)
-        pad = (x.shape[-1] - y.shape[-1]) // 2
-        if pad > 0:
-            x = x[..., pad:-pad]
+        y = self.block(x)      # already same length as x
         return x + y
 
 
@@ -117,7 +149,7 @@ class Encoder(nn.Module):
 
 
 class DecoderBlock(nn.Module):
-    def __init__(self, input_dim: int = 16, output_dim: int = 8, stride: int = 1):
+    def __init__(self, input_dim: int = 16, output_dim: int = 8, stride: int = 1, is_causal: bool = False):
         super().__init__()
         self.block = nn.Sequential(
             Snake1d(input_dim),
@@ -128,9 +160,9 @@ class DecoderBlock(nn.Module):
                 stride=stride,
                 padding=math.ceil(stride / 2),
             ),
-            ResidualUnit(output_dim, dilation=1),
-            ResidualUnit(output_dim, dilation=3),
-            ResidualUnit(output_dim, dilation=9),
+            ResidualUnit(output_dim, dilation=1, is_causal=is_causal),
+            ResidualUnit(output_dim, dilation=3, is_causal=is_causal),
+            ResidualUnit(output_dim, dilation=9, is_causal=is_causal),
         )
 
     def forward(self, x):
@@ -144,6 +176,7 @@ class Decoder(nn.Module):
         channels,
         rates,
         d_out: int = 1,
+        is_causal: bool = False,
     ):
         super().__init__()
 
@@ -154,7 +187,7 @@ class Decoder(nn.Module):
         for i, stride in enumerate(rates):
             input_dim = channels // 2**i
             output_dim = channels // 2 ** (i + 1)
-            layers += [DecoderBlock(input_dim, output_dim, stride)]
+            layers += [DecoderBlock(input_dim, output_dim, stride, is_causal)]
 
         # Add final conv layer
         layers += [
@@ -185,7 +218,8 @@ class DAC(BaseModel):
         distill_projection_out_dim=1024,
         distill=False,
         convnext=True,
-        is_causal=False,
+        convnext_causal=False,
+        dac_causal=False,
     ):
         super().__init__()
 
@@ -218,6 +252,7 @@ class DAC(BaseModel):
             latent_dim,
             decoder_dim,
             decoder_rates,
+            is_causal=dac_causal,
         )
         self.sample_rate = sample_rate
         self.apply(init_weights)
@@ -235,7 +270,7 @@ class DAC(BaseModel):
                         ConvNeXtBlock(
                             dim=distill_projection_out_dim,
                             intermediate_dim=2048,
-                            is_causal=is_causal,
+                            is_causal=convnext_causal,
                         )
                         for _ in range(5)
                     ],  # Unpack the list directly into nn.Sequential

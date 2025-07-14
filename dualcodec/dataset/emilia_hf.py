@@ -25,7 +25,7 @@ class EmiliaDataset(IterableDataset):
 
             local_dir = "/mnt/disks/emilia/emilia_dataset/Emilia/EN"
             tar_paths = [filename for filename in os.listdir(local_dir) if filename.endswith(".tar")]
-            max_shards = 2
+            max_shards = 500
             language = "EN"
             ds_list = []
 

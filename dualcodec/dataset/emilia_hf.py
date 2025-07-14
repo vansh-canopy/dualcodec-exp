@@ -27,19 +27,14 @@ class EmiliaDataset(IterableDataset):
             tar_paths = [filename for filename in os.listdir(local_dir) if filename.endswith(".tar")]
             max_shards = 500
             language = "EN"
-            ds_list = []
-
-            for i, tar_path in enumerate(tqdm(tar_paths[:max_shards], desc="Loading shards"), start=1):
-                rel_path = os.path.relpath(tar_path, start=local_dir)
-                print(f"Loading shard {i}/{max_shards}: {rel_path}")
-                ds = load_dataset(
-                    local_dir,
-                    data_files={language.lower(): tar_path},
-                    split=language.lower()
-                )
-                ds_list.append(ds)
-
-            self.dataset = concatenate_datasets(ds_list)
+            
+            self.dataset = load_dataset(
+                local_dir,
+                data_files={language.lower(): tar_paths[:max_shards]},
+                split=language.lower(),
+                num_proc=40,
+                cache_dir="/mnt/disks/emilia/emilia_cache",
+            )
         # self.dataset = self.dataset.map(lambda x: x, remove_columns=["text", "text_id"])
         # self.dataset.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
         # self.dataset = self.dataset.train_test_split(test_size=0.1)

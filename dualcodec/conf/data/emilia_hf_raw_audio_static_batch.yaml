@@ -90,7 +90,7 @@ w2v_feature:
 
 dataset:
   _target_: dualcodec.dataset.emilia_hf.EmiliaDataset
-  is_debug: true
+  is_debug: false
 
 datalist_tmp: 
   _target_: dualcodec.dataset.dataset.DataList

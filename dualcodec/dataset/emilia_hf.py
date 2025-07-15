@@ -27,9 +27,11 @@ class EmiliaDataset(IterableDataset):
             tar_paths = [filename for filename in os.listdir(local_dir) if filename.endswith(".tar")]
             language = "EN"
             
+            print("helllllllll")
+            
             self.dataset = load_dataset(
                 local_dir,
-                data_files={language.lower(): tar_paths},
+                data_files={language.lower(): tar_paths[:500]},
                 split=language.lower(),
                 num_proc=40,
                 cache_dir="/mnt/disks/emilia/emilia_cache",

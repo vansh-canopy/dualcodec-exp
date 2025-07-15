@@ -75,7 +75,7 @@ class CausalWNConv1d(nn.Module):
 
 
 class CausalUpsample(nn.Module):
-    def __init__(self, in_ch: int, out_ch: int, stride: int = 2, kernel_size: int = 4):
+    def __init__(self, in_ch: int, out_ch: int, stride: int = 2, kernel_size: int = 4, padding = 0):
         super().__init__()
         self.upsample_by = stride
         self.conv = CausalWNConv1d(in_ch, out_ch, kernel_size=kernel_size, dilation=1)  
@@ -161,15 +161,24 @@ class Encoder(nn.Module):
 
 
 class DecoderBlock(nn.Module):
-    def __init__(self, input_dim: int = 16, output_dim: int = 8, stride: int = 1, is_causal: bool = False):
+    def __init__(self, input_dim: int = 16, output_dim: int = 8, stride: int = 1, is_causal: bool = False, look_ahead = False):
         super().__init__()
+        
+        if look_ahead:
+            pad = math.ceil(stride / 2)
+            UseConv = WNConvTranspose1d
+        else:
+            pad = 0 
+            UseConv = CausalUpsample
+        
         self.block = nn.Sequential(
             Snake1d(input_dim),
-            CausalUpsample(
+            UseConv(
                 input_dim,
                 output_dim,
                 stride=stride,
                 kernel_size=2*stride,
+                padding=pad
             ),
             ResidualUnit(output_dim, dilation=1, is_causal=is_causal),
             ResidualUnit(output_dim, dilation=3, is_causal=is_causal),
@@ -188,6 +197,7 @@ class Decoder(nn.Module):
         rates,
         d_out: int = 1,
         is_causal: bool = False,
+        look_ahead: bool = False
     ):
         super().__init__()
 
@@ -198,7 +208,7 @@ class Decoder(nn.Module):
         for i, stride in enumerate(rates):
             input_dim = channels // 2**i
             output_dim = channels // 2 ** (i + 1)
-            layers += [DecoderBlock(input_dim, output_dim, stride, is_causal)]
+            layers += [DecoderBlock(input_dim, output_dim, stride, is_causal, look_ahead)]
 
         # Add final conv layer
         layers += [
@@ -231,6 +241,7 @@ class DAC(BaseModel):
         convnext=True,
         convnext_causal=False,
         dac_causal=False,
+        look_ahead=False
     ):
         super().__init__()
 
@@ -264,6 +275,7 @@ class DAC(BaseModel):
             decoder_dim,
             decoder_rates,
             is_causal=dac_causal,
+            look_ahead=look_ahead,
         )
         self.sample_rate = sample_rate
         self.apply(init_weights)

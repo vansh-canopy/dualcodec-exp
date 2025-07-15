@@ -48,6 +48,7 @@ class DualCodec(nn.Module):
         decode_semantic_for_codec=True,
         is_causal=False,
         semantic_downsample_factor=2,
+        look_ahead=False,
     ):
         self.semantic_downsample_factor = semantic_downsample_factor
         super().__init__()
@@ -67,6 +68,7 @@ class DualCodec(nn.Module):
             distill=False,
             convnext_causal=True,
             dac_causal=True,
+            look_ahead=look_ahead,
         )
         self.decode_semantic_for_codec = decode_semantic_for_codec
         self.encoder_rates = encoder_rates

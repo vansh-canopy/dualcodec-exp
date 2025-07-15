@@ -161,8 +161,8 @@ class DecoderBlock(nn.Module):
                 padding=math.ceil(stride / 2),
             ),
             ResidualUnit(output_dim, dilation=1, is_causal=is_causal),
-            ResidualUnit(output_dim, dilation=2, is_causal=is_causal),
-            ResidualUnit(output_dim, dilation=6, is_causal=is_causal),
+            ResidualUnit(output_dim, dilation=3, is_causal=is_causal),
+            ResidualUnit(output_dim, dilation=9, is_causal=is_causal),
         )
 
     def forward(self, x):

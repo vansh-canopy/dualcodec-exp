@@ -9,7 +9,7 @@ hydra:
     dir: ${machine.log_dir}/${trainer.exp_name}
 
 trainer:
-  exp_name: dualcodec_experiments_fully_causal
+  exp_name: dualcodec_experiments_look_ahead
   max_tokens: 2000
   batch_size: 8
   # args:

@@ -2,7 +2,7 @@ sample_rate: 24000
 max_tokens: 15000
 
 num_epochs: 10
-batch_size: 10
+batch_size: 16
 
 exp_name: audio_codec_trainer
 args:
@@ -44,7 +44,7 @@ cfg:
     optimizer:
       _target_: torch.optim.AdamW
       _partial_: true
-      lr: 1e-4
+      lr: 5e-5
       betas: [0.8, 0.9]
       # betas: [0.9, 0.99]
     adamw:

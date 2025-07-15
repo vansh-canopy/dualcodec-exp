@@ -73,6 +73,19 @@ class CausalWNConv1d(nn.Module):
         return self.conv(x)                
 
 
+
+class CausalUpsample(nn.Module):
+    def __init__(self, in_ch: int, out_ch: int, stride: int = 2, kernel_size: int = 4):
+        super().__init__()
+        self.upsample_by = stride
+        self.conv = CausalWNConv1d(in_ch, out_ch, kernel_size=kernel_size, dilation=1)  
+         
+    def forward(self, x):
+            x = x.repeat_interleave(self.upsample_by, dim=-1)  
+            x = self.conv(x)                                 
+            return x
+
+
 class ResidualUnit(nn.Module):
     def __init__(self, dim: int = 16, dilation: int = 1, is_causal: bool = False):
         super().__init__()
@@ -84,7 +97,6 @@ class ResidualUnit(nn.Module):
             UseConv = WNConv1d
             pad = (dilation * (7 - 1) ) // 2
     
-
         self.block = nn.Sequential(
             Snake1d(dim),
             UseConv(dim, dim, dilation=dilation, kernel_size=7, padding=pad),
@@ -153,12 +165,11 @@ class DecoderBlock(nn.Module):
         super().__init__()
         self.block = nn.Sequential(
             Snake1d(input_dim),
-            WNConvTranspose1d(
+            CausalUpsample(
                 input_dim,
                 output_dim,
-                kernel_size=2 * stride,
                 stride=stride,
-                padding=math.ceil(stride / 2),
+                kernel_size=2*stride,
             ),
             ResidualUnit(output_dim, dilation=1, is_causal=is_causal),
             ResidualUnit(output_dim, dilation=3, is_causal=is_causal),

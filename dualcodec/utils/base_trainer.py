@@ -673,6 +673,18 @@ class BaseTrainer(object):
         r"""Build scheduler for optimizer."""
         raise NotImplementedError
 
+    def _generate_wandb_run_name(self):
+        try:
+            lr = self.cfg.train.adamw.lr if hasattr(self.cfg.train, 'adamw') else self.cfg.train.optimizer.lr
+            batch_size = getattr(self, 'batch_size', None) or getattr(self.cfg, 'batch_size', 'unknown')
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%m%d_%H%M")
+            run_name = f"_lr{lr}_bs{batch_size}_{timestamp}"
+            return run_name
+        except Exception as e:
+            print(f"Could not generate custom run name: {e}")
+            return None
+
     def _init_accelerator(self):
         self.exp_dir = os.path.join(
             os.path.abspath(self.cfg.log_dir), self.args.exp_name
@@ -708,7 +720,13 @@ class BaseTrainer(object):
             os.makedirs(project_config.project_dir, exist_ok=True)
             os.makedirs(project_config.logging_dir, exist_ok=True)
         with self.accelerator.main_process_first():
-            self.accelerator.init_trackers(project_name=self.args.exp_name)
+            # Generate custom run name with lr and batch_size
+            run_name = self._generate_wandb_run_name()
+            if run_name:
+                init_kwargs = {"wandb": {"name": run_name}}
+                self.accelerator.init_trackers(project_name=self.args.exp_name, init_kwargs=init_kwargs)
+            else:
+                self.accelerator.init_trackers(project_name=self.args.exp_name)
 
     @staticmethod
     def __count_parameters(model):

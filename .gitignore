@@ -1,6 +1,8 @@
 wandb/
 output_checkpoints/
-output_checkpoints_second/
+output_checkpoints_2/
+output_checkpoints_3/
+output_checkpoints_4/
 *.pyc
 *.safetensors
 *.pt

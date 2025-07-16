@@ -4,7 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 model_id_to_fname = {
-    "12hz_v1": "dualcodec_12hz_16384_4096.safetensors",
+    "12hz_v1": "model.safetensors",
     "25hz_v1": "dualcodec_25hz_16384_1024.safetensors",
 }
 model_id_to_cfgname = {

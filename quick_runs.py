@@ -1,4 +1,5 @@
 
+from dualcodec.model_codec import dac_layers
 from dualcodec.model_codec.dac_model import DAC
 import torch
 

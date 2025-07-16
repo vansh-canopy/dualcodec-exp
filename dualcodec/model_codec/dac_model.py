@@ -58,7 +58,6 @@ class CausalWNConv1d(nn.Module):
         self.conv = weight_norm(nn.Conv1d(*args, **kwargs))
         self.add_module("conv", self.conv) # so params show up in .named_parameters()
 
-
     @property
     def kernel_size(self):
         return self.conv.kernel_size

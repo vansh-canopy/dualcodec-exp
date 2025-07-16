@@ -199,7 +199,7 @@ class Decoder(nn.Module):
         super().__init__()
 
         # Add first conv layer
-        layers = [WNConv1d(input_channel, channels, kernel_size=7, padding=3)]
+        layers = [CausalWNConv1d(input_channel, channels, kernel_size=7)]
 
         # Add upsampling + MRF blocks
         for i, stride in enumerate(rates):
@@ -210,7 +210,7 @@ class Decoder(nn.Module):
         # Add final conv layer
         layers += [
             Snake1d(output_dim),
-            WNConv1d(output_dim, d_out, kernel_size=7, padding=3),
+            CausalWNConv1d(output_dim, d_out, kernel_size=7),
             nn.Tanh(),
         ]
 

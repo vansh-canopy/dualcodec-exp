@@ -76,10 +76,6 @@ from cached_path import cached_path
 
 
 class Inference:
-    """
-    Inference class for DualCodec.
-    """
-
     def __init__(
         self,
         dualcodec_model,

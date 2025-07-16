@@ -242,5 +242,5 @@ def prepare_gluster_dataset(data_list: DataList, data_pipeline: list, mode="trai
     Returns:
     """
     for func in data_pipeline:
-        data_list = Processor(data_list, func, mode=mode)
+        data_list = Processor(data_list, func, mode=mode)  # type: ignore
     return data_list

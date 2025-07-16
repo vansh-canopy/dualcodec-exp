@@ -29,7 +29,7 @@ model:
   codebook_size: 4096
   semantic_codebook_size: 16384
   is_causal: true
-  look_ahead: true
+  look_ahead: false
   semantic_downsample_factor: 4
 discriminator:
   _target_: dualcodec.model_codec.Discriminator

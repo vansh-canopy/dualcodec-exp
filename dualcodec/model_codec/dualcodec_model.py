@@ -1,28 +1,15 @@
-# Copyright (c) 2025 Amphion.
-#
-# This source code is licensed under the MIT license found in the
-# LICENSE file in the root directory of this source tree.
-
 from .cnn import ConvNeXtBlock
 from .dac_model import DAC
 import torch.nn as nn
-import math
 from typing import List
 from typing import Union
 
-import numpy as np
 import torch
-from audiotools import AudioSignal
-from audiotools.ml import BaseModel
 from torch import nn
 
-# from .base import CodecMixin
-from .dac_layers import Snake1d
 from .dac_layers import WNConv1d
-from .dac_layers import WNConvTranspose1d
 from .dac_quantize import ResidualVectorQuantize
 from easydict import EasyDict as edict
-import torch.nn.functional as F
 import random
 from einops import rearrange
 
@@ -32,7 +19,7 @@ class DualCodec(nn.Module):
         self,
         encoder_dim: int = 64,
         encoder_rates: List[int] = [2, 4, 8, 8],
-        latent_dim: int = None,
+        latent_dim: Union[int, None] = None,
         decoder_dim: int = 1536,
         decoder_rates: List[int] = [8, 8, 4, 2],
         n_codebooks: int = 9,
@@ -72,25 +59,22 @@ class DualCodec(nn.Module):
         )
         self.decode_semantic_for_codec = decode_semantic_for_codec
         self.encoder_rates = encoder_rates
+        
         self.convnext_encoder = nn.Sequential(
-            WNConv1d(
-                1024,
-                convnext_dim,
-                kernel_size=1,
-            ),
+            WNConv1d(1024, convnext_dim, kernel_size=1),
             *[
-                ConvNeXtBlock(
-                    dim=convnext_dim, intermediate_dim=2048, is_causal=is_causal
-                )
+                ConvNeXtBlock(dim=convnext_dim, intermediate_dim=2048, is_causal=is_causal)
                 for _ in range(convnext_layers)
             ],  # Unpack the list directly into nn.Sequential
         )
+        
         self.semantic_vq = ResidualVectorQuantize(
             convnext_dim,
             n_codebooks=1,
             codebook_size=semantic_codebook_size,
             codebook_dim=semantic_codebook_dim,
         )
+        
         self.convnext_decoder = nn.Sequential(
             *[
                 ConvNeXtBlock(
@@ -100,14 +84,12 @@ class DualCodec(nn.Module):
                 )
                 for _ in range(convnext_layers)
             ],  # Unpack the list directly into nn.Sequential
-            WNConv1d(
-                convnext_dim,
-                1024,
-                kernel_size=1,
-            ),
+            WNConv1d(convnext_dim, 1024, kernel_size=1),
         )
+        
         if not self.decode_semantic_for_codec:
             assert convnext_dim == 1024
+
 
     def semantic_quantize(self, semantic_repr):
         semantic = self.convnext_encoder(semantic_repr)

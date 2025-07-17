@@ -1,10 +1,8 @@
-
-# configs passed to gluster_dataset.py
 dataloader:
   _target_: torch.utils.data.DataLoader
   dataset: ${..datalist}
   batch_size: null
-  num_workers: 18  # Set to 0 to avoid torchcodec multi-processing issues
+  num_workers: 18  
   # prefetch_factor: 20
 
 gluster_opener:

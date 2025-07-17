@@ -1,7 +1,3 @@
-# Copyright (c) 2025 Amphion.
-#
-# This source code is licensed under the MIT license found in the
-# LICENSE file in the root directory of this source tree.
 import torch
 import torchaudio
 import torch.nn.functional as F
@@ -10,6 +6,8 @@ from easydict import EasyDict as edict
 from contextlib import nullcontext
 import warnings
 
+from transformers import Wav2Vec2BertModel
+from transformers import SeamlessM4TFeatureExtractor
 
 def _build_semantic_model(
     dualcodec_path,
@@ -32,7 +30,7 @@ def _build_semantic_model(
     - std: torch.Tensor containing precomputed standard deviation for normalization
     - feature_extractor: SeamlessM4TFeatureExtractor for audio preprocessing
     """
-    from transformers import Wav2Vec2BertModel
+    
 
     if not torch.cuda.is_available():
         warnings.warn("CUDA is not available, running on CPU.")
@@ -40,10 +38,7 @@ def _build_semantic_model(
 
     # load semantic model
     semantic_model = Wav2Vec2BertModel.from_pretrained(semantic_model_path)
-    semantic_model = semantic_model.eval().to(device)
-
-    # load feature extractor
-    from transformers import SeamlessM4TFeatureExtractor
+    semantic_model = semantic_model.eval().to(device)  # type: ignore
 
     w2v_feat_extractor = SeamlessM4TFeatureExtractor.from_pretrained(
         semantic_model_path

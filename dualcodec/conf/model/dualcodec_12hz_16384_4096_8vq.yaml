@@ -28,8 +28,9 @@ model:
   quantizer_dropout: 1.0
   codebook_size: 4096
   semantic_codebook_size: 16384
-  is_causal: true
-  look_ahead: false
+  make_convnext_causal: true
+  make_dac_causal: true
+  add_dac_look_ahead: false
   semantic_downsample_factor: 4
 discriminator:
   _target_: dualcodec.model_codec.Discriminator

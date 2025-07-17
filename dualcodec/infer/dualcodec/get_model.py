@@ -11,15 +11,11 @@ import warnings
 import hydra
 from hydra import initialize
 from cached_path import cached_path
-
+import os
 import safetensors
 import safetensors.torch
 
 def get_model(model_id="12hz_v1", pretrained_model_path="hf://amphion/dualcodec", is_checkpoint=False):
-    import os
-
-    pretrained_model_path = cached_path(pretrained_model_path)
-
     with initialize(version_base="1.3", config_path="../../conf/model"):
         cfg = hydra.compose(config_name=model_id_to_cfgname[model_id], overrides=[])
         model = hydra.utils.instantiate(cfg.model)
@@ -29,6 +25,8 @@ def get_model(model_id="12hz_v1", pretrained_model_path="hf://amphion/dualcodec"
             "pretrained_model_path is not given, model will be loaded without weights"
         )
     else:
+        pretrained_model_path = cached_path(pretrained_model_path)
+        
         if is_checkpoint:
             model_fname = os.path.join(pretrained_model_path, "model.safetensors")
         else:

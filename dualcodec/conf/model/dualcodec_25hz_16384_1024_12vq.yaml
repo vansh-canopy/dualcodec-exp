@@ -12,3 +12,6 @@ model:
 discriminator:
   _target_: dualcodec.model_codec.Discriminator
   sample_rate: ${..SAMPLE_RATE}
+
+
+# Needs modification for new architecture (check 12hz File)

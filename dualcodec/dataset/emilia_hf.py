@@ -27,8 +27,6 @@ class EmiliaDataset(IterableDataset):
             tar_paths = [filename for filename in os.listdir(local_dir) if filename.endswith(".tar")]
             language = "EN"
             
-            print("helllllllll")
-            
             self.dataset = load_dataset(
                 local_dir,
                 data_files={language.lower(): tar_paths},
@@ -36,6 +34,13 @@ class EmiliaDataset(IterableDataset):
                 num_proc=40,
                 cache_dir="/mnt/disks/emilia/emilia_cache",
             )
+            
+            local_dir2 = "/mnt/disks/emilia/emilia_dataset/Emilia/ZH"
+            tar_paths_2 = [filename for filename in os.listdir(local_dir) if filename.endswith(".tar")]
+            language = "ZH"
+            
+            
+            
         # self.dataset = self.dataset.map(lambda x: x, remove_columns=["text", "text_id"])
         # self.dataset.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
         # self.dataset = self.dataset.train_test_split(test_size=0.1)

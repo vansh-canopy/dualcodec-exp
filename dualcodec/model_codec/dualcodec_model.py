@@ -33,9 +33,10 @@ class DualCodec(nn.Module):
         convnext_dim=768,
         convnext_layers=4,
         decode_semantic_for_codec=True,
-        is_causal=False,
+        make_convnext_causal=False,
+        make_dac_causal=True,
+        add_dac_look_ahead=False,
         semantic_downsample_factor=2,
-        look_ahead=False,
     ):
         self.semantic_downsample_factor = semantic_downsample_factor
         super().__init__()
@@ -53,9 +54,9 @@ class DualCodec(nn.Module):
             sample_rate,
             distill_projection_out_dim,
             distill=False,
-            convnext_causal=True,
-            dac_causal=True,
-            look_ahead=look_ahead,
+            make_convnext_causal=True,  # convnext inside DAC should always be causal?
+            make_dac_causal=make_dac_causal,
+            add_dac_look_ahead=add_dac_look_ahead,
         )
         self.decode_semantic_for_codec = decode_semantic_for_codec
         self.encoder_rates = encoder_rates
@@ -63,7 +64,7 @@ class DualCodec(nn.Module):
         self.convnext_encoder = nn.Sequential(
             WNConv1d(1024, convnext_dim, kernel_size=1),
             *[
-                ConvNeXtBlock(dim=convnext_dim, intermediate_dim=2048, is_causal=is_causal)
+                ConvNeXtBlock(dim=convnext_dim, intermediate_dim=2048, is_causal=make_convnext_causal)
                 for _ in range(convnext_layers)
             ],  # Unpack the list directly into nn.Sequential
         )
@@ -80,7 +81,7 @@ class DualCodec(nn.Module):
                 ConvNeXtBlock(
                     dim=convnext_dim,
                     intermediate_dim=2048,
-                    is_causal=is_causal,
+                    is_causal=make_convnext_causal,
                 )
                 for _ in range(convnext_layers)
             ],  # Unpack the list directly into nn.Sequential
@@ -90,17 +91,9 @@ class DualCodec(nn.Module):
         if not self.decode_semantic_for_codec:
             assert convnext_dim == 1024
 
-
     def semantic_quantize(self, semantic_repr):
         semantic = self.convnext_encoder(semantic_repr)
-        (
-            semantic,
-            codes,
-            latents,
-            commitment_loss,
-            codebook_loss,
-            first_layer_quantized,
-        ) = self.semantic_vq(semantic)
+        semantic, codes, _, _, _, _ = self.semantic_vq(semantic)
         codes = rearrange(codes, "b 1 t -> b t")
         return codes
 
@@ -109,14 +102,8 @@ class DualCodec(nn.Module):
     ):
         assert not self.training
         semantic = self.convnext_encoder(semantic_repr)
-        (
-            semantic,
-            codes,
-            latents,
-            commitment_loss,
-            codebook_loss,
-            first_layer_quantized,
-        ) = self.semantic_vq(semantic)
+        semantic, codes, _, _, _, _ = self.semantic_vq(semantic)
+        
         if self.decode_semantic_for_codec:
             semantic = self.convnext_decoder(semantic)
         semantic_codes = codes
@@ -149,7 +136,7 @@ class DualCodec(nn.Module):
         self,
         audio_data: torch.Tensor,
         sample_rate: int = 24000,
-        n_quantizers: int = None,
+        n_quantizers: Union[int, None] = None,
         semantic_repr=None,
         bypass_quantize_rate=0.125,
         possibly_no_quantizer=False,
@@ -161,18 +148,22 @@ class DualCodec(nn.Module):
             latents,
             commitment_loss,
             codebook_loss,
-            first_layer_quantized,
+            _,
         ) = self.semantic_vq(semantic)
         if self.decode_semantic_for_codec:
             semantic = self.convnext_decoder(semantic)
 
         bypass_quantize = random.random() < bypass_quantize_rate
+        
         if not self.training:
             bypass_quantize = False
+
         if n_quantizers == 1:
             bypass_quantize = True
+        
         if n_quantizers is not None:
             n_quantizers = n_quantizers - 1
+        
         acoustic_edict = self.dac(
             audio_data,
             sample_rate,
@@ -181,8 +172,8 @@ class DualCodec(nn.Module):
             bypass_quantize=bypass_quantize,
             possibly_no_quantizer=possibly_no_quantizer,
         )
+        
         if not self.decode_semantic_for_codec:
-            # decode afterwards
             semantic = self.convnext_decoder(semantic)
 
         semantic_edict = edict(
@@ -194,7 +185,6 @@ class DualCodec(nn.Module):
                 "vq/codebook_loss": codebook_loss,
                 "metrics": {},
                 "bypassed_quantize": bypass_quantize,
-                # "first_layer_quantized": first_layer_quantized,
             }
         )
         return acoustic_edict, semantic_edict

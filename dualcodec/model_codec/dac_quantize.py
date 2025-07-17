@@ -139,7 +139,7 @@ class ResidualVectorQuantize(nn.Module):
 
     def __init__(
         self,
-        input_dim: int = 512,
+        input_dim: int,
         n_codebooks: int = 9,
         codebook_size: int = 1024,
         codebook_dim: Union[int, list] = 8,

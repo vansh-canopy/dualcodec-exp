@@ -1,10 +1,3 @@
-# Copyright (c) 2025 Amphion.
-#
-# This source code is licensed under the MIT license found in the
-# LICENSE file in the root directory of this source tree.
-"""
-From DAC: https://github.com/descriptinc/descript-audio-codec/blob/main/dac/model
-"""
 import math
 from typing import List
 from typing import Union
@@ -14,10 +7,10 @@ import torch
 from audiotools import AudioSignal
 from audiotools.ml import BaseModel
 from torch import nn
+from torch.nn.utils import weight_norm
 
 from .dac_layers import Snake1d
 from .dac_layers import WNConv1d
-from .dac_layers import WNConvTranspose1d
 from .dac_quantize import ResidualVectorQuantize
 from easydict import EasyDict as edict
 import torch.nn.functional as F
@@ -31,24 +24,15 @@ def init_weights(m):
 
 
 def pad_to_length(x, length, pad_value=0):
-    # Get the current size along the last dimension
     current_length = x.shape[-1]
 
-    # If the length is greater than current_length, we need to pad
     if length > current_length:
         pad_amount = length - current_length
-        # Pad on the last dimension (right side), keeping all other dimensions the same
         x_padded = F.pad(x, (0, pad_amount), value=pad_value)
     else:
-        # If no padding is required, simply slice the tensor
         x_padded = x[..., :length]
 
     return x_padded
-
-
-import torch.nn.functional as F
-from torch import nn
-from torch.nn.utils import weight_norm
 
 
 class CausalWNConv1d(nn.Module):
@@ -91,39 +75,44 @@ class CausalUpsample(nn.Module):
 
 
 class ResidualUnit(nn.Module):
-    def __init__(self, dim: int = 16, dilation: int = 1, is_causal: bool = False):
+    def __init__(self, input_dimension: int = 16, dilation: int = 1, make_causal: bool = False):
         super().__init__()
         
-        if is_causal:
-            UseConv = CausalWNConv1d
-            pad = 0
-        else:
-            UseConv = WNConv1d
+        if make_causal:
+            self.block = nn.Sequential(
+                Snake1d(input_dimension),
+                CausalWNConv1d(input_dimension, input_dimension, dilation=dilation, kernel_size=7),
+                Snake1d(input_dimension),
+                CausalWNConv1d(input_dimension, input_dimension, kernel_size=1),
+            )
+        else:  
             pad = (dilation * (7 - 1) ) // 2
-    
-        self.block = nn.Sequential(
-            Snake1d(dim),
-            UseConv(dim, dim, dilation=dilation, kernel_size=7, padding=pad),
-            Snake1d(dim),
-            UseConv(dim, dim, kernel_size=1),
-        )
+            self.block = nn.Sequential(
+                Snake1d(input_dimension),
+                WNConv1d(input_dimension, input_dimension, dilation=dilation, kernel_size=7, padding=pad),
+                Snake1d(input_dimension),
+                WNConv1d(input_dimension, input_dimension, kernel_size=1),
+            )
 
     def forward(self, x):
-        y = self.block(x)      # already same length as x
+        y = self.block(x) 
         return x + y
 
 
 class EncoderBlock(nn.Module):
-    def __init__(self, dim: int = 16, stride: int = 1):
+    def __init__(self, output_dimension: int = 16, stride: int = 1):
         super().__init__()
+        
+        input_dimension = output_dimension // 2   # 
+
         self.block = nn.Sequential(
-            ResidualUnit(dim // 2, dilation=1),
-            ResidualUnit(dim // 2, dilation=3),
-            ResidualUnit(dim // 2, dilation=9),
-            Snake1d(dim // 2),
+            ResidualUnit(input_dimension, dilation=1),
+            ResidualUnit(input_dimension, dilation=3),
+            ResidualUnit(input_dimension, dilation=9),
+            Snake1d(input_dimension),
             WNConv1d(
-                dim // 2,
-                dim,
+                input_dimension,
+                output_dimension,
                 kernel_size=2 * stride,
                 stride=stride,
                 padding=math.ceil(stride / 2),
@@ -137,31 +126,28 @@ class EncoderBlock(nn.Module):
 class Encoder(nn.Module):
     def __init__(
         self,
-        d_model: int = 64,
-        strides: list = [2, 4, 8, 8],
-        d_latent: int = 64,
+        encoder_dim: int = 64,
+        encoder_rates: list = [2, 4, 8, 8],
+        latent_dim: Union[int, None] = None,
     ):
         super().__init__()
-        # Create first convolution
-        self.block = [WNConv1d(1, d_model, kernel_size=7, padding=3)]
+        
+        self.block = [WNConv1d(1, encoder_dim, kernel_size=7, padding=3)]
 
-        # Create EncoderBlocks that double channels as they downsample by `stride`
-        for stride in strides:
-            d_model *= 2
-            self.block += [EncoderBlock(d_model, stride=stride)]
+        for stride in encoder_rates:
+            encoder_dim = encoder_dim * 2
+            self.block += [EncoderBlock(encoder_dim, stride=stride)]
 
-        # Create last convolution
         self.block += [
-            Snake1d(d_model),
-            WNConv1d(d_model, d_latent, kernel_size=3, padding=1),
+            Snake1d(encoder_dim),
+            WNConv1d(encoder_dim, latent_dim, kernel_size=3, padding=1),
         ]
 
-        # Wrap black into nn.Sequential
         self.block = nn.Sequential(*self.block)
-        self.enc_dim = d_model
+        self.encoder_dim = encoder_dim
 
     def forward(self, x):
-        return self.block(x)
+        return self.block(x)  # type: ignore
 
 
 class DecoderBlock(nn.Module):
@@ -177,9 +163,9 @@ class DecoderBlock(nn.Module):
                 kernel_size=2*stride,
                 look_ahead=look_ahead
             ),
-            ResidualUnit(output_dim, dilation=1, is_causal=is_causal),
-            ResidualUnit(output_dim, dilation=3, is_causal=is_causal),
-            ResidualUnit(output_dim, dilation=9, is_causal=is_causal),
+            ResidualUnit(output_dim, dilation=1, make_causal=is_causal),
+            ResidualUnit(output_dim, dilation=3, make_causal=is_causal),
+            ResidualUnit(output_dim, dilation=9, make_causal=is_causal),
         )
 
     def forward(self, x):
@@ -225,7 +211,7 @@ class DAC(BaseModel):
         self,
         encoder_dim: int = 64,
         encoder_rates: List[int] = [2, 4, 8, 8],
-        latent_dim: int = None,
+        latent_dim: Union[int, None] = None,
         decoder_dim: int = 1536,
         decoder_rates: List[int] = [8, 8, 4, 2],
         n_codebooks: int = 9,
@@ -235,10 +221,10 @@ class DAC(BaseModel):
         sample_rate: int = 44100,
         distill_projection_out_dim=1024,
         distill=False,
-        convnext=True,
-        convnext_causal=False,
-        dac_causal=False,
-        look_ahead=False
+        use_convnext=True,
+        make_convnext_causal=False,
+        make_dac_causal=False,
+        add_dac_look_ahead=False
     ):
         super().__init__()
 
@@ -260,7 +246,7 @@ class DAC(BaseModel):
         self.codebook_size = codebook_size
         self.codebook_dim = codebook_dim
         self.quantizer = ResidualVectorQuantize(
-            input_dim=latent_dim,
+            input_dim=latent_dim, # type: ignore
             n_codebooks=n_codebooks,
             codebook_size=codebook_size,
             codebook_dim=codebook_dim,
@@ -271,8 +257,8 @@ class DAC(BaseModel):
             latent_dim,
             decoder_dim,
             decoder_rates,
-            is_causal=dac_causal,
-            look_ahead=look_ahead,
+            is_causal=make_dac_causal,
+            look_ahead=add_dac_look_ahead,
         )
         self.sample_rate = sample_rate
         self.apply(init_weights)
@@ -284,13 +270,13 @@ class DAC(BaseModel):
                 distill_projection_out_dim,
                 kernel_size=1,
             )
-            if convnext:
+            if use_convnext:
                 self.convnext = nn.Sequential(
                     *[
                         ConvNeXtBlock(
                             dim=distill_projection_out_dim,
                             intermediate_dim=2048,
-                            is_causal=convnext_causal,
+                            is_causal=make_convnext_causal,
                         )
                         for _ in range(5)
                     ],  # Unpack the list directly into nn.Sequential
@@ -303,6 +289,7 @@ class DAC(BaseModel):
             else:
                 self.convnext = nn.Identity()
 
+
     def preprocess(self, audio_data, sample_rate):
         if sample_rate is None:
             sample_rate = self.sample_rate
@@ -314,42 +301,14 @@ class DAC(BaseModel):
 
         return audio_data
 
+
     def encode(
         self,
         audio_data: torch.Tensor,
         sample_rate=24000,
-        n_quantizers: int = None,
+        n_quantizers: Union[int, None] = None,
         subtracted_latent=None,
     ):
-        """Encode given audio data and return quantized latent codes
-
-        Parameters
-        ----------
-        audio_data : Tensor[B x 1 x T]
-            Audio data to encode
-        n_quantizers : int, optional
-            Number of quantizers to use, by default None
-            If None, all quantizers are used.
-
-        Returns
-        -------
-        dict
-            A dictionary with the following keys:
-            "z" : Tensor[B x D x T]
-                Quantized continuous representation of input
-            "codes" : Tensor[B x N x T]
-                Codebook indices for each codebook
-                (quantized discrete representation of input)
-            "latents" : Tensor[B x N*D x T]
-                Projected latents (continuous representation of input before quantization)
-            "vq/commitment_loss" : Tensor[1]
-                Commitment loss to train encoder to predict vectors closer to codebook
-                entries
-            "vq/codebook_loss" : Tensor[1]
-                Codebook loss to update the codebook
-            "length" : int
-                Number of samples in input audio
-        """
         assert not self.training
         audio_data = self.preprocess(audio_data, sample_rate)
         z = self.encoder(audio_data)
@@ -386,46 +345,14 @@ class DAC(BaseModel):
         bypass_quantize=False,
         possibly_no_quantizer=False,
     ):
-        """Model forward pass
-
-        Parameters
-        ----------
-        audio_data : Tensor[B x 1 x T]
-            Audio data to encode
-        sample_rate : int, optional
-            Sample rate of audio data in Hz, by default None
-            If None, defaults to `self.sample_rate`
-        n_quantizers : int, optional
-            Number of quantizers to use, by default None.
-            If None, all quantizers are used.
-
-        Returns
-        -------
-        dict
-            A dictionary with the following keys:
-            "z" : Tensor[B x D x T]
-                Quantized continuous representation of input
-            "codes" : Tensor[B x N x T]
-                Codebook indices for each codebook
-                (quantized discrete representation of input)
-            "latents" : Tensor[B x N*D x T]
-                Projected latents (continuous representation of input before quantization)
-            "vq/commitment_loss" : Tensor[1]
-                Commitment loss to train encoder to predict vectors closer to codebook
-                entries
-            "vq/codebook_loss" : Tensor[1]
-                Codebook loss to update the codebook
-            "length" : int
-                Number of samples in input audio
-            "audio" : Tensor[B x 1 x length]
-                Decoded audio data.
-        """
         length = audio_data.shape[-1]
         audio_data = self.preprocess(audio_data, sample_rate)
         z = self.encoder(audio_data)
+      
         if subtracted_latent is not None:
             assert (z.shape[-1] - subtracted_latent.shape[-1]) <= 2
             z = z[..., : subtracted_latent.shape[-1]] - subtracted_latent
+      
         if bypass_quantize:
             codes, latents, commitment_loss, codebook_loss, first_layer_quantized = (
                 None,
@@ -443,6 +370,7 @@ class DAC(BaseModel):
                     possibly_no_quantizer=possibly_no_quantizer,
                 )
             )
+        
         if subtracted_latent is not None:
             z = z + subtracted_latent
 
@@ -467,11 +395,10 @@ class DAC(BaseModel):
             }
         )
 
+import numpy as np
+from functools import partial
 
 if __name__ == "__main__":
-    import numpy as np
-    from functools import partial
-
     model = DAC().to("cpu")
 
     for n, m in model.named_modules():
@@ -479,6 +406,7 @@ if __name__ == "__main__":
         p = sum([np.prod(p.size()) for p in m.parameters()])
         fn = lambda o, p: o + f" {p/1e6:<.3f}M params."
         setattr(m, "extra_repr", partial(fn, o=o, p=p))
+    
     print(model)
     print("Total # of params: ", sum([np.prod(p.size()) for p in model.parameters()]))
 
@@ -500,11 +428,11 @@ if __name__ == "__main__":
     out.backward(grad)
 
     # Check non-zero values
-    gradmap = x.grad.squeeze(0)
+    gradmap = x.grad.squeeze(0)  # type: ignore
     gradmap = (gradmap != 0).sum(0)  # sum across features
     rf = (gradmap != 0).sum()
 
     print(f"Receptive field: {rf.item()}")
 
     x = AudioSignal(torch.randn(1, 1, 44100 * 60), 44100)
-    model.decompress(model.compress(x, verbose=True), verbose=True)
+    model.decompress(model.compress(x, verbose=True), verbose=True) # type: ignore

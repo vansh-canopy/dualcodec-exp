@@ -14,32 +14,39 @@ path = "DE/*.tar"  # only for testing. please use full data
 class EmiliaDataset(IterableDataset):
     def __init__(self, is_debug=True):
         if is_debug:
-            self.dataset = load_dataset(
+            self.ds1 = load_dataset(
                 "amphion/Emilia-Dataset",
                 # data_files={"de": "DE/*.tar"},
                 split="train",
                 streaming=True,
             )
         else:
-            # self.dataset = load_dataset("amphion/Emilia-Dataset", streaming=True)['train']
-
-            local_dir = "/mnt/disks/emilia/emilia_dataset/Emilia/ZH"
-            tar_paths = [filename for filename in os.listdir(local_dir) if filename.endswith(".tar")]
-            max_shards = 10
-            language = "EN"
             
-            self.dataset = load_dataset(
-                local_dir,
-                data_files={language.lower(): tar_paths[:max_shards]},
-                split=language.lower(),
-                num_proc=40,
+            en_directory = "/mnt/disks/emilia/emilia_dataset/Emilia/"
+            en_paths = [filename for filename in os.listdir(en_directory) if filename.endswith(".tar")]
+            language_1 = "EN"
+            
+            self.ds1 = load_dataset(
+                en_directory,
+                data_files={language_1.lower(): en_paths},
+                split=language_1.lower(),
+                num_proc=50,
                 cache_dir="/mnt/disks/emilia/emilia_cache",
             )
             
-            # local_dir2 = "/mnt/disks/emilia/emilia_dataset/Emilia/ZH"
-            # tar_paths_2 = [filename for filename in os.listdir(local_dir) if filename.endswith(".tar")]
-            # language = "ZH"
+            zh_directory = "/mnt/disks/emilia/emilia_dataset/Emilia/ZH"
+            zh_paths = [filename for filename in os.listdir(zh_directory) if filename.endswith(".tar")]
+            language_2 = "ZH"
             
+            self.ds2 = load_dataset(
+                zh_directory,
+                data_files={language_2.lower(): zh_paths},
+                split=language_2.lower(),
+                num_proc=50,
+                cache_dir="/mnt/disks/emilia/emilia_cache",
+            )
+            
+            self.dataset = concatenate_datasets([self.ds1, self.ds2])   # type: ignore
             
             
         # self.dataset = self.dataset.map(lambda x: x, remove_columns=["text", "text_id"])

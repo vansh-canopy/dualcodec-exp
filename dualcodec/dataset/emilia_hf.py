@@ -22,7 +22,7 @@ class EmiliaDataset(IterableDataset):
             )
         else:
             
-            en_directory = "/mnt/disks/emilia/emilia_dataset/Emilia/"
+            en_directory = "/mnt/disks/emilia/emilia_dataset/Emilia/EN"
             en_paths = [filename for filename in os.listdir(en_directory) if filename.endswith(".tar")]
             language_1 = "EN"
             

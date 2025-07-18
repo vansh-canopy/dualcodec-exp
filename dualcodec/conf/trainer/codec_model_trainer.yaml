@@ -1,8 +1,8 @@
 sample_rate: 24000
 max_tokens: 15000
 
-num_epochs: 1
-batch_size: 22
+num_epochs: 3
+batch_size: 13
 
 exp_name: audio_codec_trainer
 args:
@@ -34,7 +34,7 @@ cfg:
     max_epoch: 1000
     save_checkpoint_stride: 
       - 5000
-    keep_last: [1]
+    keep_last: [100]
     run_eval: true
     dataloader:
       num_worker: 4
@@ -52,7 +52,7 @@ cfg:
     scheduler:
       warmup_steps: 5000
       total_steps: 1000000
-      min_lr: 5e-6
+      min_lr: 5e-5
     exponentiallr:
       gamma: 0.999999
     max_sentences: 64

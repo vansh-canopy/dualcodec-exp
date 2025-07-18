@@ -23,7 +23,7 @@ def train(cfg):
 @hydra.main(
     version_base="1.3",
     config_path="./dualcodec/conf",
-    config_name="dualcodec_train.yaml",
+    config_name="dualcodec_main.yaml",
 )
 def main(cfg: DictConfig) -> Optional[float]:
     # train the model

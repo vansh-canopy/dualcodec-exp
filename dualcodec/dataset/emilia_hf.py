@@ -19,7 +19,7 @@ class EmiliaDataset(IterableDataset):
             
             self.dataset = load_dataset(
                 local_dir,
-                data_files={language.lower(): tar_paths[:500]},
+                data_files={language.lower(): tar_paths},
                 split=language.lower(),
                 num_proc=40,
                 cache_dir="/mnt/disks/emilia/emilia_cache",

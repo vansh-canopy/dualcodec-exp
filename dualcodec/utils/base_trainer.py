@@ -708,7 +708,12 @@ class BaseTrainer(object):
             os.makedirs(project_config.project_dir, exist_ok=True)
             os.makedirs(project_config.logging_dir, exist_ok=True)
         with self.accelerator.main_process_first():
-            self.accelerator.init_trackers(project_name=self.args.exp_name)
+            # Initialize experiment tracking (e.g., WandB) with custom run name
+            run_name = generate_run_name(self.cfg)
+            self.accelerator.init_trackers(
+                project_name=self.args.exp_name,
+                init_kwargs={"wandb": {"name": run_name}},
+            )
 
     @staticmethod
     def __count_parameters(model):
@@ -728,3 +733,19 @@ class BaseTrainer(object):
         pass
 
     ### Private methods end ###
+
+
+def generate_run_name(cfg):
+    from datetime import datetime
+    # lr
+    lr = None
+    if hasattr(cfg, "train") and hasattr(cfg.train, "adamw") and hasattr(cfg.train.adamw, "lr"):
+        lr = cfg.train.adamw.lr
+    elif hasattr(cfg, "train") and hasattr(cfg.train, "optimizer") and hasattr(cfg.train.optimizer, "lr"):
+        lr = cfg.train.optimizer.lr
+    else:
+        lr = "?"
+    # batch size
+    bs = getattr(cfg, "batch_size", getattr(getattr(cfg, "train", None), "batch_size", "?"))
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return f"lr{lr}_bs{bs}_{ts}"

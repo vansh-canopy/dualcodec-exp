@@ -38,7 +38,7 @@ model:
   make_dac_causal: true
   add_dac_look_ahead: false
   semantic_downsample_factor: 4
-  semantic_repr_dim: 512
+  semantic_repr_dim: 1024
 discriminator:
   _target_: dualcodec.model_codec.Discriminator
   sample_rate: ${..SAMPLE_RATE}

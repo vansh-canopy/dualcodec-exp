@@ -163,10 +163,14 @@ class Trainer(BaseTrainer):
                 input_features, attention_mask
             ).transpose(1, 2)
             
+            # Wave 2 Vec produces the right number of latents (50/s)
+            # So does whisper but because openai is a bitch, they pad the latents upto 1500
             # quick hack to drop padded whisper latents
-            audio_len_in_s = audio_lengths[0].item() / 24000
-            whisper_latents_to_keep = int(50 * audio_len_in_s)
-            features = features[:,:,:whisper_latents_to_keep]
+            
+            sr = 24000 
+            audio_len_in_s = audio_lengths[0].item() / sr
+            num_latents_to_keep = int(50 * audio_len_in_s)
+            features = features[:,:,:num_latents_to_keep]
             
             features = torch.nn.functional.avg_pool1d(
                 features,

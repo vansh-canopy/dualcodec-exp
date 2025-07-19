@@ -8,7 +8,7 @@ output_checkpoints_4/
 *.pt
 .venv
 whisper-stream-lookahead-3/
-whisper-base-config/
+whisper-base-conf/
 w2v-b-2.0/
 dualcodec_ckpts/
 

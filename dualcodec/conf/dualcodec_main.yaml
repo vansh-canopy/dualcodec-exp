@@ -1,8 +1,8 @@
 defaults:
-  - data: emilia_hf_raw_audio_static_batch
+  - data: emilia_hf_raw_audio_static_batch_with_w2v
   - machine: devbox
   - model: dualcodec_12hz_16384_4096_8vq
-  - trainer: codec_model_trainer
+  - trainer: codec_model_with_w2v
   - _self_
 hydra:
   run:

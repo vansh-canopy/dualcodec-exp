@@ -33,7 +33,7 @@ def get_model(model_id="12hz_v1", pretrained_model_path="hf://amphion/dualcodec"
             model_fname = os.path.join(pretrained_model_path, model_id_to_fname[model_id])
         
         print("Loading model from", model_fname)
-        safetensors.torch.load_model(model, model_fname)
+        safetensors.torch.load_model(model, model_fname, strict=False)
         print("Model loaded")
         
     model.eval()

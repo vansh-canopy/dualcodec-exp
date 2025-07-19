@@ -155,12 +155,7 @@ class InferenceWhisper:
         # Run only the Whisper encoder to obtain hidden states (no decoder needed)
         encoder_out = self.semantic_cfg["semantic_model"].encoder(input_features=input_features)
         feat = encoder_out.last_hidden_state  # (B, T, 512)
-
-        # Zero-pad to 1024 channels for compatibility
-        if feat.shape[-1] < 1024:
-            pad_size = 1024 - feat.shape[-1]
-            pad = torch.zeros(*feat.shape[:-1], pad_size, device=feat.device, dtype=feat.dtype)
-            feat = torch.cat([feat, pad], dim=-1)
+       # Return raw 512-dim features; DualCodec will map to 1024 internally
         return feat
 
 

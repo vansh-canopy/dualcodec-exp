@@ -37,6 +37,7 @@ class DualCodec(nn.Module):
         make_dac_causal=True,
         add_dac_look_ahead=False,
         semantic_downsample_factor=2,
+        semantic_repr_dim=1024,
     ):
         self.semantic_downsample_factor = semantic_downsample_factor
         super().__init__()
@@ -61,6 +62,12 @@ class DualCodec(nn.Module):
         self.decode_semantic_for_codec = decode_semantic_for_codec
         self.encoder_rates = encoder_rates
         
+    
+        if semantic_repr_dim == 1024:
+            self.semantic_mapper = nn.Identity()
+        else:
+            self.semantic_mapper = nn.Linear(semantic_repr_dim, 1024, bias=False)
+
         self.convnext_encoder = nn.Sequential(
             WNConv1d(1024, convnext_dim, kernel_size=1),
             *[
@@ -85,13 +92,19 @@ class DualCodec(nn.Module):
                 )
                 for _ in range(convnext_layers)
             ],  # Unpack the list directly into nn.Sequential
-            WNConv1d(convnext_dim, 1024, kernel_size=1),
+            WNConv1d(convnext_dim, 1024, kernel_size=1),  # keep decoder output at 1024 for DAC
         )
         
         if not self.decode_semantic_for_codec:
             assert convnext_dim == 1024
 
     def semantic_quantize(self, semantic_repr):
+        # semantic_repr: (B, C, T)  →  (B, T, C) for Linear → back to (B, C, T)
+        if semantic_repr is not None and not isinstance(self.semantic_mapper, nn.Identity):
+            semantic_repr = semantic_repr.transpose(1, 2)
+            semantic_repr = self.semantic_mapper(semantic_repr)
+            semantic_repr = semantic_repr.transpose(1, 2)
+        
         semantic = self.convnext_encoder(semantic_repr)
         semantic, codes, _, _, _, _ = self.semantic_vq(semantic)
         codes = rearrange(codes, "b 1 t -> b t")
@@ -101,6 +114,11 @@ class DualCodec(nn.Module):
         self, audio_data, num_quantizers=None, sample_rate=24000, semantic_repr=None
     ):
         assert not self.training
+        if semantic_repr is not None and not isinstance(self.semantic_mapper, nn.Identity):
+            semantic_repr = semantic_repr.transpose(1, 2)
+            semantic_repr = self.semantic_mapper(semantic_repr)
+            semantic_repr = semantic_repr.transpose(1, 2)
+        
         semantic = self.convnext_encoder(semantic_repr)
         semantic, codes, _, _, _, _ = self.semantic_vq(semantic)
         
@@ -141,6 +159,11 @@ class DualCodec(nn.Module):
         bypass_quantize_rate=0.125,
         possibly_no_quantizer=False,
     ):
+        if semantic_repr is not None and not isinstance(self.semantic_mapper, nn.Identity):
+            semantic_repr = semantic_repr.transpose(1, 2)
+            semantic_repr = self.semantic_mapper(semantic_repr)
+            semantic_repr = semantic_repr.transpose(1, 2)
+        
         semantic = self.convnext_encoder(semantic_repr)
         (
             semantic,

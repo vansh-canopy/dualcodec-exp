@@ -16,21 +16,6 @@ def _build_semantic_model(
     device="cuda",
     **kwargs,
 ):
-    """Build the w2v semantic model and load pretrained weights.
-    Inputs:
-    - dualcodec_path: str, path to the dualcodec model
-    - meanvar_fname: str, filename of the mean and variance statistics
-    - semantic_model_path: str, path to the semantic model, or a huggngface model name
-    Outputs:
-    cfg: edict, containing the semantic model, mean, std, and feature extractor.
-    - model: Wav2Vec2BertModel instance for semantic feature extraction
-    - layer_idx: int (15), index of the layer to extract features from
-    - output_idx: int (17), index of the output layer (layer_idx + 2)
-    - mean: torch.Tensor containing precomputed mean for feature normalization
-    - std: torch.Tensor containing precomputed standard deviation for normalization
-    - feature_extractor: SeamlessM4TFeatureExtractor for audio preprocessing
-    """
-    
 
     if not torch.cuda.is_available():
         warnings.warn("CUDA is not available, running on CPU.")
@@ -68,7 +53,6 @@ def _build_semantic_model(
 
 
 from cached_path import cached_path
-
 
 class Inference:
     def __init__(

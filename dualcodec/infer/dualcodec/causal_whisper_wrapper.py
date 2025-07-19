@@ -73,16 +73,3 @@ class CausalWhisperForConditionalGeneration(WhisperForConditionalGeneration):
     def __init__(self, config: WhisperConfig):
         super().__init__(config)
         self.model.encoder = CausalWhisperEncoder(config)
-
-
-def load_causal_whisper(model_name: str = "openai/whisper-base", 
-                        for_conditional: bool = False):
-    conf = WhisperConfig.from_pretrained(model_name)
-    
-    if for_conditional:
-        model = CausalWhisperForConditionalGeneration.from_pretrained(model_name, config=conf)
-    else:
-        model = CausalWhisperModel.from_pretrained(model_name, config=conf)
-
-    return model
-

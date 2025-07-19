@@ -4,7 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 model_id_to_fname = {
-    "12hz_v1": "model.safetensors",
+    "12hz_v1": "dualcodec_12hz_16384_4096.safetensors",
     "25hz_v1": "dualcodec_25hz_16384_1024.safetensors",
 }
 model_id_to_cfgname = {
@@ -15,7 +15,7 @@ model_id_to_cfgname = {
 from cached_path import cached_path
 
 
-def get_model(model_id="12hz_v1", pretrained_model_path="hf://amphion/dualcodec"):
+def get_model(model_id="12hz_v1", pretrained_model_path="hf://amphion/dualcodec", name=None):
     import os
 
     # import importlib.resources as pkg_resources
@@ -36,7 +36,10 @@ def get_model(model_id="12hz_v1", pretrained_model_path="hf://amphion/dualcodec"
             "pretrained_model_path is not given, model will be loaded without weights"
         )
     else:
-        model_fname = os.path.join(pretrained_model_path, model_id_to_fname[model_id])
+        if not name:
+            name = model_id_to_fname[model_id]
+        
+        model_fname = os.path.join(pretrained_model_path, name)
         print("Loading model from", model_fname)
         import safetensors
         import safetensors.torch

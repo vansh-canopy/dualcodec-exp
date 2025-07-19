@@ -1,3 +1,5 @@
+# This is the baseline model. 
+#
 # SAMPLE_RATE: 24000
 # model:
 #   _target_: dualcodec.model_codec.DualCodec
@@ -15,6 +17,10 @@
 # discriminator:
 #   _target_: dualcodec.model_codec.Discriminator
 #   sample_rate: ${..SAMPLE_RATE}
+
+
+# We have changed the order of the decoder and encoder rates to 
+# lower the receptive field of the model. feel free to play around with the rates.
 
 SAMPLE_RATE: 24000
 model:

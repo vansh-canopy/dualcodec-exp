@@ -46,12 +46,6 @@ normalize:
   _partial_: true
   use_kana: true
 
-# sort:
-#   _target_: dualcodec.dataset.processor.sort
-#   _partial_: true
-#   sort_size: 1000  # sort_size should be less than shuffle_size
-#   ignore_text: true
-
 batch:
   _target_: dualcodec.dataset.processor.batch
   _partial_: true
@@ -59,13 +53,6 @@ batch:
   batch_size: ${trainer.batch_size}
   ignore_text: true
   max_frames_in_batch: null
-
-# for dynamic:
-# batch:
-#   _target_: dualcodec.dataset.processor.batch
-#   _partial_: true
-#   batch_type: 'dynamic'
-#   max_frames_in_batch: ${trainer.max_tokens}
 
 gluster_padding:
   _target_: dualcodec.dataset.processor.gluster_padding
@@ -76,23 +63,15 @@ gluster_padding:
 
 
 # ---- W2V feature block ----
-# w2v_feat_extractor:
-#   _target_: transformers.SeamlessM4TFeatureExtractor.from_pretrained
-#   _partial_: false
-#   pretrained_model_name_or_path: ${machine.w2v_path}
-# w2v_feature:
-#   _target_: dualcodec.dataset.processor.w2v_feature
-#   _partial_: true
-#   feature_extractor: ${..w2v_feat_extractor}
-
-# ---- Whisper feature block ----
-whisper_feat_extractor:
-  _target_: transformers.WhisperFeatureExtractor.from_pretrained
-  pretrained_model_name_or_path: ${machine.whisper_config_path}
-whisper_feature:
-  _target_: dualcodec.dataset.processor.whisper_feature
+w2v_feat_extractor:
+  _target_: transformers.SeamlessM4TFeatureExtractor.from_pretrained
+  _partial_: false
+  pretrained_model_name_or_path: ${machine.w2v_path}
+w2v_feature:
+  _target_: dualcodec.dataset.processor.w2v_feature
   _partial_: true
-  feature_extractor: ${..whisper_feat_extractor}
+  feature_extractor: ${..w2v_feat_extractor}
+
 
 dataset:
   _target_: dualcodec.dataset.emilia_hf.EmiliaDataset
@@ -116,10 +95,9 @@ segment_speech:
 
 data_pipeline:
   - ${..gluster_opener}
-  # - ${..shuffle}
-  - ${..gluster_filter} # with no text token filter
+  - ${..gluster_filter}
   - ${..resample}
   - ${..segment_speech}
-  - ${..whisper_feature}
+  - ${..w2v_feature}
   - ${..batch}
   - ${..gluster_padding}

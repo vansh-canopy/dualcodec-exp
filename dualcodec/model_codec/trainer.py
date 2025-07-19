@@ -84,21 +84,21 @@ class Trainer(BaseTrainer):
         sem_mod = self.cfg.semantic_model["model"]
 
         if isinstance(sem_mod, CausalWhisperModel):
-            feat = sem_mod.encoder(input_features=input_features).last_hidden_state
+            features = sem_mod.encoder(input_features=input_features).last_hidden_state
         else:
             vq_emb = sem_mod(
                 input_features=input_features,
                 attention_mask=attention_mask,
                 output_hidden_states=True,
             )
-            feat = vq_emb.hidden_states[self.cfg.semantic_model["output_idx"]]
+            features = vq_emb.hidden_states[self.cfg.semantic_model["output_idx"]]
 
             if not self.cfg.semantic_model.get("skip_semantic_normalize", False):
-                feat = (
-                    feat - self.cfg.semantic_model["mean"]
+                features = (
+                    features - self.cfg.semantic_model["mean"]
                 ) / self.cfg.semantic_model["std"]
 
-        return feat
+        return features
 
     def _build_model(self):
         """
@@ -147,16 +147,6 @@ class Trainer(BaseTrainer):
         return None
 
     def _train_step(self, batch):
-        """
-        Args:
-        - batch: dict containing the batch data
-        -- batch["speech"]: torch.Tensor of shape (B, T)
-        -- batch["speech_lens"]: torch.Tensor of shape (B,), contains the length of the unpadded speech
-        -- batch["input_features"]: torch.Tensor of shape (B, T, C), extracted by w2v-bert feat extractor
-        -- batch["attention_mask"]: torch.Tensor of shape (B, T), attention mask for the input_features, extracted by w2v-bert feat extractor
-        """
-        optim_g, optim_d = self.optimizer, self.optimizer_d
-
         for k, v in batch.items():
             if isinstance(v, torch.Tensor):
                 batch[k] = v.to(self.accelerator.device)
@@ -168,6 +158,7 @@ class Trainer(BaseTrainer):
         if self.cfg.semantic_vq:
             input_features = batch["input_features"]
             attention_mask = batch["attention_mask"]
+            
             features = self._extract_semantic_code(
                 input_features, attention_mask
             ).transpose(1, 2)
@@ -187,7 +178,7 @@ class Trainer(BaseTrainer):
                 x_wav,
                 semantic_repr=features,
                 bypass_quantize_rate=0.125,
-                possibly_no_quantizer=False,  # internal dropout
+                possibly_no_quantizer=False,
             )
         else:
             out_dict = self.model(

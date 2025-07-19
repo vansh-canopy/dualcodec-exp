@@ -16,16 +16,26 @@ cfg:
   dataloader: null
   log_dir: ${machine.log_dir}
   model: ${model.model}
+  
   semantic_model:
-    _target_: dualcodec.dataset.processor._build_semantic_model
+  
+    # ----- W2V-BERT -----
+    # _target_: dualcodec.dataset.processor._buil  d_semantic_model
+    # _partial_: false
+    # semantic_model:
+    #   _target_: transformers.Wav2Vec2BertModel.from_pretrained
+    #   _partial_: false
+    #   pretrained_model_name_or_path: ${machine.w2v_path}
+    # mean_var_path: ${machine.ckpt_root_path}/w2vbert2_mean_var_stats_emilia.pt
+    # repcodec_model: null
+    # repcodec_path: null
+
+    # ----- Whisper -----
+    _target_: dualcodec.dataset.processor._build_whisper_semantic_model
     _partial_: false
-    semantic_model:
-      _target_: transformers.Wav2Vec2BertModel.from_pretrained
-      _partial_: false
-      pretrained_model_name_or_path: ${machine.w2v_path}
-    mean_var_path: ${machine.ckpt_root_path}/w2vbert2_mean_var_stats_emilia.pt
-    repcodec_model: null
-    repcodec_path: null
+    whisper_config_path: ${machine.whisper_config_path}
+    whisper_model_path: ${machine.whisper_path}
+  
   discriminator_model: ${model.discriminator}
   train:
     gradient_accumulation_step: 1

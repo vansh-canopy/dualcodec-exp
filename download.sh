@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "Downloading W2V-BERT 2.0 model..."
-huggingface-cli download facebook/w2v-bert-2.0 --local-dir w2v-bert-2.0
+huggingface-cli download facebook/w2v-bert-2.0 --local-dir w2v-b-2.0
 
 echo "Downloading DualCodec checkpoints and W2V-BERT2 statistics..."
 huggingface-cli download amphion/dualcodec \
@@ -14,5 +14,10 @@ huggingface-cli download amphion/dualcodec \
 
 echo "Downloading Whisper causal-base model (config + weights)..."
 huggingface-cli download vanshjjw/whisper-stream-lookahead-3 --local-dir whisper-stream-lookahead-3
+
+echo "Downloading Whisper base extractor configs..."
+huggingface-cli download openai/whisper-base \
+    feature_extractor_config.json preprocessor_config.json \
+    --local-dir whisper-base-config
 
 echo "All models downloaded successfully!"

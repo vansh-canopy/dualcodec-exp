@@ -23,6 +23,7 @@ from easydict import EasyDict as edict
 
 USE_HINGE_LOSS = False
 from audiotools import AudioSignal
+from dualcodec.infer.dualcodec.causal_whisper_wrapper import CausalWhisperModel
 
 
 class Trainer(BaseTrainer):
@@ -52,8 +53,6 @@ class Trainer(BaseTrainer):
             window_lengths=[256, 512, 1024, 2048],
         )
         self.semantic_spec_loss = MultibandMelSpectrogramLoss(
-            # bands=[(0.0, 0.1), (0.1, 0.25), (0.25, 0.5), (0.5, 0.75), (0.75, 1.0)],
-            # band_weights=[16,8,4,2,1],
             bands=[(0.0, 0.1)],
             band_weights=[1.0],
             loss_fn=nn.MSELoss(),
@@ -78,25 +77,27 @@ class Trainer(BaseTrainer):
         if hasattr(self.model, "module"):
             self.model_module = self.model.module
 
+
     @torch.no_grad()
     @torch.cuda.amp.autocast()
-    def _extract_semantic_code(self, input_features, attention_mask):
-        vq_emb = self.cfg.semantic_model["model"](
-            input_features=input_features,
-            attention_mask=attention_mask,
-            output_hidden_states=True,
-        )
-        feat = vq_emb.hidden_states[self.cfg.semantic_model["output_idx"]]  # (B, T, C)
+    def _extract_semantic_code(self, input_features, attention_mask=None):
+        sem_mod = self.cfg.semantic_model["model"]
 
-        if (
-            hasattr(self.cfg, "skip_semantic_normalize")
-            and self.cfg.skip_semantic_normalize
-        ):
-            pass
+        if isinstance(sem_mod, CausalWhisperModel):
+            feat = sem_mod.encoder(input_features=input_features).last_hidden_state
         else:
-            feat = (feat - self.cfg.semantic_model["mean"]) / self.cfg.semantic_model[
-                "std"
-            ]
+            vq_emb = sem_mod(
+                input_features=input_features,
+                attention_mask=attention_mask,
+                output_hidden_states=True,
+            )
+            feat = vq_emb.hidden_states[self.cfg.semantic_model["output_idx"]]
+
+            if not self.cfg.semantic_model.get("skip_semantic_normalize", False):
+                feat = (
+                    feat - self.cfg.semantic_model["mean"]
+                ) / self.cfg.semantic_model["std"]
+
         return feat
 
     def _build_model(self):
@@ -167,17 +168,24 @@ class Trainer(BaseTrainer):
         if self.cfg.semantic_vq:
             input_features = batch["input_features"]
             attention_mask = batch["attention_mask"]
-            feat = self._extract_semantic_code(
+            features = self._extract_semantic_code(
                 input_features, attention_mask
             ).transpose(1, 2)
-            feat = torch.nn.functional.avg_pool1d(
-                feat,
+            
+            # quick hack to drop padded whisper latents
+            audio_len_in_s = audio_lengths[0].item() / 24000
+            whisper_latents_to_keep = int(50 * audio_len_in_s)
+            features = features[:,:,:whisper_latents_to_keep]
+            
+            features = torch.nn.functional.avg_pool1d(
+                features,
                 self.model_module.semantic_downsample_factor,
                 self.model_module.semantic_downsample_factor,
             )
+            
             out_dict, semantic_edict = self.model(
                 x_wav,
-                semantic_repr=feat,
+                semantic_repr=features,
                 bypass_quantize_rate=0.125,
                 possibly_no_quantizer=False,  # internal dropout
             )
@@ -199,12 +207,13 @@ class Trainer(BaseTrainer):
         else:
             first_layer_quantized = None
 
-
         # --------- Discriminator training ------------
+
         if USE_HINGE_LOSS:
             disc_loss = self.gan_loss.discriminator_hinge_loss(generator_out, x_wav)
         else:
             disc_loss = self.gan_loss.discriminator_loss(generator_out, x_wav)
+        
         self.optimizer_d.zero_grad()
         self.accelerator.backward(disc_loss)
         torch.nn.utils.clip_grad_norm_(self.discriminator.parameters(), 1.0)
@@ -212,25 +221,24 @@ class Trainer(BaseTrainer):
         self.optimizer_d.zero_grad()
 
         if USE_HINGE_LOSS:
-            adv_g_loss, feat_loss = self.gan_loss.generator_hinge_loss(
+            adv_loss, feat_loss = self.gan_loss.generator_hinge_loss(
                 generator_out, x_wav
             )
         else:
-            adv_g_loss, feat_loss = self.gan_loss.generator_loss(generator_out, x_wav)
+            adv_loss, feat_loss = self.gan_loss.generator_loss(generator_out, x_wav)
         spec_loss = self.spec_loss(
             AudioSignal(x_wav, 24000), AudioSignal(generator_out, 24000)
         )
-        # spec_loss = reconstruction_loss(x_wav, generator_out, args)
+        
         total_loss = (
-            0.25 * commitment_loss
-            + 1.0 * adv_g_loss
-            + 2.0 * feat_loss
-            + 15.0 * spec_loss
-            + 1.0 * codebook_loss
+            0.25 * commitment_loss + 1.0 * adv_loss + 2.0 * feat_loss
+            + 15.0 * spec_loss + 1.0 * codebook_loss
         )
+        
         # ---------- Generator training ----------------
+        
         if semantic_edict:
-            distill_loss = F.mse_loss(feat, semantic_edict["x"])
+            distill_loss = F.mse_loss(features, semantic_edict["x"])
             total_loss += (
                 distill_loss * self.cfg.lambda_distill_loss
                 + self.cfg.lambda_semantic_commitment_loss * semantic_edict["penalty"]
@@ -266,14 +274,14 @@ class Trainer(BaseTrainer):
         if self.distill:
             input_features = batch["input_features"]
             attention_mask = batch["attention_mask"]
-            feat = self._extract_semantic_code(
+            features = self._extract_semantic_code(
                 input_features, attention_mask
             ).transpose(1, 2)
-            feat = torch.nn.functional.avg_pool1d(
-                feat, self.semantic_downsample_factor, self.semantic_downsample_factor
+            features = torch.nn.functional.avg_pool1d(
+                features, self.semantic_downsample_factor, self.semantic_downsample_factor
             )
             distill_loss = F.mse_loss(
-                feat, first_layer_quantized[..., : feat.shape[-1]]
+                features, first_layer_quantized[..., : features.shape[-1]]
             )
             total_loss += distill_loss * self.cfg.lambda_distill_loss
         else:
@@ -284,25 +292,18 @@ class Trainer(BaseTrainer):
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
         self.optimizer.step()
 
-        # print(commitment_loss, spec_loss)
-        # print(x_wav.shape[0])
-        # breakpoint()
-        # print(out_dict.codes)
-        # if self.step >= 100:
-        #     breakpoint()
         metrics.update(
             {
                 "commitment_loss": commitment_loss,
                 "spec_loss": spec_loss,
                 "feat_loss": feat_loss,
-                "adv_g_loss": adv_g_loss,
+                "adv_g_loss": adv_loss,
                 "total_loss": total_loss,
                 "Train/Batch Size": x_wav.shape[0],
                 "disc_loss": disc_loss.item(),
                 "distill_loss": distill_loss,
             }
         )
-        # print(metrics)
 
         return total_loss, metrics
 

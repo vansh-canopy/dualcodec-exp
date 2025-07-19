@@ -98,6 +98,12 @@ class DualCodec(nn.Module):
         if not self.decode_semantic_for_codec:
             assert convnext_dim == 1024
 
+        # Inverse mapper for distillation: map 1024-ch back to original semantic_repr_dim
+        if semantic_repr_dim == 1024:
+            self.semantic_inverse_mapper = nn.Identity()
+        else:
+            self.semantic_inverse_mapper = nn.Linear(1024, semantic_repr_dim, bias=False)
+
     def semantic_quantize(self, semantic_repr):
         # semantic_repr: (B, C, T)  →  (B, T, C) for Linear → back to (B, C, T)
         if semantic_repr is not None and not isinstance(self.semantic_mapper, nn.Identity):
@@ -199,9 +205,16 @@ class DualCodec(nn.Module):
         if not self.decode_semantic_for_codec:
             semantic = self.convnext_decoder(semantic)
 
+        # Map semantic back to original dimension for distillation logging
+        semantic_out = semantic
+        if not isinstance(self.semantic_inverse_mapper, nn.Identity):
+            semantic_out = semantic_out.transpose(1,2)  # (B,T,1024)
+            semantic_out = self.semantic_inverse_mapper(semantic_out)  # (B,T,orig_dim)
+            semantic_out = semantic_out.transpose(1,2)
+
         semantic_edict = edict(
             {
-                "x": semantic,
+                "x": semantic_out,
                 "codes": codes,
                 "latents": latents,
                 "penalty": commitment_loss,

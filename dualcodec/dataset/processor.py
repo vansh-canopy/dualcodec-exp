@@ -1,9 +1,4 @@
-# -*- coding: UTF-8 -*-
-################################################################################
-#
-# Copyright (c) 2024 Amphion. All Rights Reserved
-#
-################################################################################
+
 """
 Dataset processor tool
 """
@@ -651,3 +646,60 @@ def gluster_padding(
         )
         packed_batch_features["sample_rate"] = sample[0]["sample_rate"]
         yield packed_batch_features
+
+# -----------------------------------------------------------------------------
+# Whisper helpers (512-dim semantics)
+# -----------------------------------------------------------------------------
+
+from transformers import WhisperFeatureExtractor, WhisperConfig  # type: ignore
+from dualcodec.infer.dualcodec.causal_whisper_wrapper import CausalWhisperModel  # type: ignore
+
+
+def _build_whisper_semantic_model(whisper_config_path, whisper_model_path):
+    """Load causal Whisper model + feature extractor for semantic training path."""
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    # Load model using its own config to avoid size mismatches
+    conf = WhisperConfig.from_pretrained('openai/whisper-base')
+    model = CausalWhisperModel.from_pretrained(whisper_model_path, config=conf).eval()
+    model = model.to(device)
+
+    # Hard-coded causal look-ahead mask (lookahead=3, max_len=1500)
+    if hasattr(model.encoder, "_create_lookahead_mask"):
+        model.encoder.causal_mask = model.encoder._create_lookahead_mask(1500, 3).to(device)
+
+    feat_extractor = WhisperFeatureExtractor.from_pretrained(whisper_config_path)
+
+    return {
+        "model": model,
+        "feature_extractor": feat_extractor,
+        "skip_semantic_normalize": True,  # Whisper already LN'd
+    }
+
+
+def whisper_feature(data, feature_extractor, make_multiple_of=1, mode="train"):
+    """Generate Whisper log-mel features (50 fps) for each sample.
+
+    `mode` is accepted for compatibility with the dataset pipeline but is not used.
+    """
+    for sample in data:
+        if sample["sample_rate"] != 16000:
+            resampler = torchaudio.transforms.Resample(sample["sample_rate"], 16000)
+            wav16 = resampler(sample["speech"])
+        else:
+            wav16 = sample["speech"]
+
+        # WhisperFeatureExtractor expects 1-D waveform (time,). Squeeze channel dim.
+        waveform = wav16.squeeze(0).cpu()
+
+        feats = feature_extractor(
+            waveform,
+            sampling_rate=16000,
+            return_tensors="pt",
+        )
+        
+        sample["speech_feat"] = feats["input_features"][0]
+        T = sample["speech_feat"].shape[0]
+        sample["speech_feat_mask"] = torch.ones(T)
+        
+        yield sample

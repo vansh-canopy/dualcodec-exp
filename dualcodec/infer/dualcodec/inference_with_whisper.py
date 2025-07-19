@@ -23,11 +23,17 @@ def _build_whisper_semantic_model(
 
     whisper_conf = WhisperConfig.from_pretrained(whisper_config_path)
     model = CausalWhisperModel.from_pretrained(whisper_model_path, config=whisper_conf)
+    
+    LOOK_AHEAD = 3
+    SEQ_LEN = 1500
+    
+    if hasattr(model.encoder, "_create_lookahead_mask"):
+        model.encoder.causal_mask = model.encoder._create_lookahead_mask(SEQ_LEN, LOOK_AHEAD).to(device)
+    
     model = model.eval().to(device)  # type: ignore
 
     feat_extractor = WhisperFeatureExtractor.from_pretrained(whisper_config_path)
 
-    # Whisper-base encoder has 32 layers → choose last hidden state (31)
     output_idx = 31
 
     return edict(
@@ -79,12 +85,6 @@ class InferenceWhisper:
             if isinstance(v, (torch.nn.Module, torch.Tensor)):
                 self.semantic_cfg[k] = v.to(device)
 
-        # Ensure causal mask inside whisper encoder (if present) is on the same device
-        whisper_model = self.semantic_cfg["semantic_model"]
-        if hasattr(whisper_model, "encoder") and hasattr(whisper_model.encoder, "causal_mask"):
-            whisper_model.encoder.causal_mask = whisper_model.encoder._create_lookahead_mask(1500, 3)
-            whisper_model.encoder.causal_mask = whisper_model.encoder.causal_mask.to(device)
-
         self.device = device
         self.autocast = autocast
 
@@ -110,23 +110,17 @@ class InferenceWhisper:
         
         input_features = inputs["input_features"][0]
         
-        print("input_features.shape", input_features.shape)
-        
         input_features = input_features.unsqueeze(0).to(self.device)
         audio = audio.to(self.device)
 
         with torch.autocast(device_type=self.device, dtype=torch.float16):
-            feat = self._extract_semantic_code(input_features).transpose(1, 2)
+            features = self._extract_semantic_code(input_features).transpose(1, 2)
             
-            print("feat.shape", feat.shape)
-            
-            feat = torch.nn.functional.avg_pool1d(
-                feat,
+            features = torch.nn.functional.avg_pool1d(
+                features,
                 self.model.semantic_downsample_factor,
                 self.model.semantic_downsample_factor,
             )
-            
-            print("feat.shape after avg_pool1d", feat.shape)
 
         ctx = (
             torch.autocast(device_type=self.device, dtype=torch.float16)
@@ -135,7 +129,7 @@ class InferenceWhisper:
         )
         with ctx:
             semantic_codes, acoustic_codes = self.model.encode(
-                audio, num_quantizers=n_quantizers, semantic_repr=feat
+                audio, num_quantizers=n_quantizers, semantic_repr=features
             )
 
         return semantic_codes, acoustic_codes
@@ -152,11 +146,9 @@ class InferenceWhisper:
 
     @torch.no_grad()
     def _extract_semantic_code(self, input_features):
-        # Run only the Whisper encoder to obtain hidden states (no decoder needed)
         encoder_out = self.semantic_cfg["semantic_model"].encoder(input_features=input_features)
-        feat = encoder_out.last_hidden_state  # (B, T, 512)
-       # Return raw 512-dim features; DualCodec will map to 1024 internally
-        return feat
+        features = encoder_out.last_hidden_state  # (B, T, 512)
+        return features
 
 
 

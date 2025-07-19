@@ -3,4 +3,4 @@ ckpt_root_path: ./dualcodec_ckpts
 log_dir: ./output_checkpoints_3
 init_model_path: ./dualcodec_ckpts
 whisper_path: ./whisper-stream-lookahead-3
-whisper_config_path: ./whisper-base-config
+whisper_config_path: ./whisper-base-conf

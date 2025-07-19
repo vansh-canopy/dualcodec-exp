@@ -18,6 +18,6 @@ huggingface-cli download vanshjjw/whisper-stream-lookahead-3 --local-dir whisper
 echo "Downloading Whisper base extractor configs..."
 huggingface-cli download openai/whisper-base \
     feature_extractor_config.json preprocessor_config.json \
-    --local-dir whisper-base-config
+    --local-dir whisper-base-conf
 
 echo "All models downloaded successfully!"

@@ -12,4 +12,7 @@ huggingface-cli download amphion/dualcodec \
     w2vbert2_mean_var_stats_emilia.pt \
     --local-dir dualcodec_ckpts
 
-echo "All models downloaded successfully!"
+echo "Downloading Whisper causal-base model (config + weights)..."
+huggingface-cli download vanshjjw/whisper-stream-lookahead-3 --local-dir whisper-stream-lookahead-3
+
+echo "All models downloaded successfully!"

@@ -7,3 +7,6 @@ output_checkpoints_4/
 *.safetensors
 *.pt
 .venv
+whisper-stream-lookahead-3/
+w2v-b-2.0/
+dualcodec_ckpts/

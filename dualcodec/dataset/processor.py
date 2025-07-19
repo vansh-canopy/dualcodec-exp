@@ -647,9 +647,7 @@ def gluster_padding(
         packed_batch_features["sample_rate"] = sample[0]["sample_rate"]
         yield packed_batch_features
 
-# -----------------------------------------------------------------------------
-# Whisper helpers (512-dim semantics)
-# -----------------------------------------------------------------------------
+
 
 from transformers import WhisperFeatureExtractor, WhisperConfig  # type: ignore
 from dualcodec.infer.dualcodec.causal_whisper_wrapper import CausalWhisperModel  # type: ignore
@@ -665,8 +663,11 @@ def _build_whisper_semantic_model(whisper_config_path, whisper_model_path):
     model = model.to(device)
 
     # Hard-coded causal look-ahead mask (lookahead=3, max_len=1500)
+    LOOK_AHEAD = 3
+    SEQ_LEN = 1500
+    
     if hasattr(model.encoder, "_create_lookahead_mask"):
-        model.encoder.causal_mask = model.encoder._create_lookahead_mask(1500, 3).to(device)
+        model.encoder.causal_mask = model.encoder._create_lookahead_mask(SEQ_LEN, LOOK_AHEAD).to(device)
 
     feat_extractor = WhisperFeatureExtractor.from_pretrained(whisper_config_path)
 

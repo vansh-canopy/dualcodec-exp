@@ -1,15 +1,15 @@
 defaults:
-  - data: emilia_hf_raw_audio_static_batch_with_w2v
+  - data: emilia_hf_raw_audio_static_batch_with_whisper
   - machine: devbox
   - model: dualcodec_12hz_16384_4096_8vq
-  - trainer: codec_model_with_w2v
+  - trainer: codec_model_with_whisper
   - _self_
 hydra:
   run:
     dir: ${machine.log_dir}/${trainer.exp_name}
 
 trainer:
-  exp_name: dualcodec_experiments_causal_decoder
+  exp_name: dualcodec_experiments_causal_decoder_with_whisper
   max_tokens: 2000
   batch_size: 8
   cfg:

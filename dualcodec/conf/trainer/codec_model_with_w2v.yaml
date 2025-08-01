@@ -46,10 +46,10 @@ cfg:
     optimizer:
       _target_: torch.optim.AdamW
       _partial_: true
-      lr: 5e-5
+      lr: 1e-4
       betas: [0.8, 0.9]
     adamw:
-      lr: 5e-5
+      lr: 1e-4
     scheduler:
       warmup_steps: 5000
       total_steps: 1000000

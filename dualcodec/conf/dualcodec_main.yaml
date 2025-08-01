@@ -11,12 +11,12 @@ hydra:
 trainer:
   exp_name: dualcodec_experiments_causal_decoder_with_whisper
   max_tokens: 2000
-  batch_size: 8
+  batch_size: 13
   cfg:
     semantic_vq: true
     lambda_semantic_commitment_loss: 0.25
     lambda_semantic_codebook_loss: 1.0
-    lambda_distill_loss: 15.0
+    lambda_distill_loss: 12.5
     add_semantic_spec_loss: true
     train:
       max_steps: 400000

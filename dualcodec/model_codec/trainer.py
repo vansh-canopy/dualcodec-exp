@@ -226,8 +226,11 @@ class Trainer(BaseTrainer):
         )
         
         total_loss = (
-            0.25 * commitment_loss + 1.0 * adv_loss + 2.0 * feat_loss
-            + 15.0 * spec_loss + 1.0 * codebook_loss
+            0.25 * commitment_loss 
+            + 2.0 * adv_loss 
+            + 4.0 * feat_loss
+            + 15.0 * spec_loss 
+            + 1.0 * codebook_loss
         )
         
         # ---------- Generator training ----------------

@@ -36,7 +36,7 @@ model:
   semantic_codebook_size: 16384
   make_convnext_causal: true
   make_dac_causal: true
-  add_dac_look_ahead: false
+  add_dac_look_ahead: true
   semantic_downsample_factor: 4
   semantic_repr_dim: 512
 discriminator:

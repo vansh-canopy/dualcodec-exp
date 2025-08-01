@@ -1,6 +1,6 @@
 w2v_path: ./w2v-b-2.0
 ckpt_root_path: ./dualcodec_ckpts
-log_dir: ./output_checkpoints_3
+log_dir: ./output_checkpoints
 init_model_path: ./dualcodec_ckpts
 whisper_path: ./whisper-stream-lookahead-3
 whisper_config_path: ./whisper-base-conf

@@ -26,13 +26,14 @@ def get_model(model_id="12hz_v1", pretrained_model_path="hf://amphion/dualcodec"
         )
     else:
         pretrained_model_path = cached_path(pretrained_model_path)
+        print("pretrained_model_path", pretrained_model_path)
         
         if is_checkpoint:
             model_fname = os.path.join(pretrained_model_path, "model.safetensors")
         else:
             model_fname = os.path.join(pretrained_model_path, model_id_to_fname[model_id])
         
-        print("Loading model from", model_fname)
+        print("Loading model from here", model_fname)
         safetensors.torch.load_model(model, model_fname, strict=strict)
         print("Model loaded")
         

@@ -6,9 +6,11 @@
 model_id_to_fname = {
     "12hz_v1": "dualcodec_12hz_16384_4096.safetensors",
     "25hz_v1": "dualcodec_25hz_16384_1024.safetensors",
+    "12hz_v2": "",
 }
 model_id_to_cfgname = {
     "12hz_v1": "dualcodec_12hz_16384_4096_8vq.yaml",
+    "12hz_v2": "dualcodec_12hz_16384_4096_8vq.yaml",
     "25hz_v1": "dualcodec_25hz_16384_1024_12vq.yaml",
 }
 

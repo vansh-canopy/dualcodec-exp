@@ -20,7 +20,7 @@ trainer:
     semantic_vq: true
     lambda_semantic_commitment_loss: 0.25
     lambda_semantic_codebook_loss: 1.0
-    lambda_distill_loss: 15.0
+    lambda_distill_loss: 17.5
     add_semantic_spec_loss: true
     train:
       max_steps: 400000

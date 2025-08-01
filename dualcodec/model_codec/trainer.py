@@ -223,8 +223,8 @@ class Trainer(BaseTrainer):
         # spec_loss = reconstruction_loss(x_wav, generator_out, args)
         total_loss = (
             0.25 * commitment_loss
-            + 1.0 * adv_g_loss
-            + 2.0 * feat_loss
+            + 1.5 * adv_g_loss
+            + 2.5 * feat_loss
             + 15.0 * spec_loss
             + 1.0 * codebook_loss
         )

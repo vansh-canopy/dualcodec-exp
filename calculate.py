@@ -33,7 +33,7 @@ def extract_conv_info(module: nn.Module):
     elif isinstance(module, nn.Conv1d):
         padding = getattr(module, 'padding', (0,))[0]
         k = getattr(module, 'kernel_size', 1)[0]
-        s = getattr(module, 'kernel_size', 1)[0]
+        s = getattr(module, 'stride', 1)[0]
         d = getattr(module, 'dilation', 1)[0]
         lookahead = (k-1)*d + (1-s) - padding
         return module, lookahead, padding
@@ -72,20 +72,32 @@ def add_conv_layer(layers, name, module, layer_type='C', override_stride=None):
 
 
 def add_repeat_layer(layers, name, module):
-    # For CausalUpsample, use upsample_by
+    # For CausalUpsample, use upsample_by and also add its internal convolution
     if isinstance(module, CausalUpsample):
         repeats = module.upsample_by
+        # Add the repeat/upsample operation
+        layers.append({
+            'name': f"{name}.repeat",
+            'type': 'R',
+            'k': 1, 's': repeats, 'd': 1,
+            'lookahead': 0,
+            'in_ch': 0, 'out_ch': 0,
+            'groups': 1,
+            'padding': 0,
+        })
+        # Add the internal convolution
+        add_conv_layer(layers, f"{name}.conv", module.conv)
     else:
         repeats = getattr(module, 'repeats', 2)
-    layers.append({
-        'name': name,
-        'type': 'R',
-        'k': 1, 's': repeats, 'd': 1,
-        'lookahead': 0,
-        'in_ch': 0, 'out_ch': 0,
-        'groups': 1,
-        'padding': 0,
-    })
+        layers.append({
+            'name': name,
+            'type': 'R',
+            'k': 1, 's': repeats, 'd': 1,
+            'lookahead': 0,
+            'in_ch': 0, 'out_ch': 0,
+            'groups': 1,
+            'padding': 0,
+        })
 
 
 def get_model_part(model: DAC, mode: str) -> nn.Module:
@@ -205,7 +217,7 @@ def load_model():
         distill=False,
         use_convnext=True,
         make_convnext_causal=True,
-        make_dac_causal=False,
+        make_dac_causal=True,
         add_dac_look_ahead=True
     )
     return model

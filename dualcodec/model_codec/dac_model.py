@@ -63,7 +63,7 @@ class CausalUpsample(nn.Module):
         self.upsample_by = stride
         
         if look_ahead:
-            pad = math.ceil(stride / 2)
+            pad = 0
             self.conv = WNConv1d(in_ch, out_ch, kernel_size, padding=pad)
         else:
             self.conv = CausalWNConv1d(in_ch, out_ch, kernel_size=kernel_size, dilation=1)  
@@ -103,12 +103,12 @@ class EncoderBlock(nn.Module):
     def __init__(self, output_dimension: int = 16, stride: int = 1):
         super().__init__()
         
-        input_dimension = output_dimension // 2   # 
+        input_dimension = output_dimension // 2    
 
         self.block = nn.Sequential(
-            ResidualUnit(input_dimension, dilation=1),
+            ResidualUnit(input_dimension, dilation=1, make_causal=True),
             ResidualUnit(input_dimension, dilation=3),
-            ResidualUnit(input_dimension, dilation=9),
+            ResidualUnit(input_dimension, dilation=9, make_causal=True),
             Snake1d(input_dimension),
             WNConv1d(
                 input_dimension,
@@ -132,7 +132,7 @@ class Encoder(nn.Module):
     ):
         super().__init__()
         
-        self.block = [WNConv1d(1, encoder_dim, kernel_size=7, padding=3)]
+        self.block = [CausalWNConv1d(1, encoder_dim, kernel_size=7, padding=3)]
 
         for stride in encoder_rates:
             encoder_dim = encoder_dim * 2
@@ -140,7 +140,7 @@ class Encoder(nn.Module):
 
         self.block += [
             Snake1d(encoder_dim),
-            WNConv1d(encoder_dim, latent_dim, kernel_size=3, padding=1),
+            CausalWNConv1d(encoder_dim, latent_dim, kernel_size=3, padding=1),
         ]
 
         self.block = nn.Sequential(*self.block)

@@ -1,0 +1,71 @@
+DAPS Evaluation Samples Metadata
+==================================================
+
+Sample duration: 7 seconds
+Sample rate: 24000 Hz
+Random seed: 42
+Total samples: 10
+
+Sample Details:
+--------------------------------------------------
+
+Sample 00:
+  Gender: male
+  Original file: m1_script1_produced.wav
+  Source path: /mnt/disks/emilia/daps/produced/m1_script1_produced.wav
+  Output file: 00_male_m1_script1_produced_sample.wav
+
+Sample 01:
+  Gender: male
+  Original file: m8_script1_produced.wav
+  Source path: /mnt/disks/emilia/daps/produced/m8_script1_produced.wav
+  Output file: 01_male_m8_script1_produced_sample.wav
+
+Sample 02:
+  Gender: male
+  Original file: m6_script1_produced.wav
+  Source path: /mnt/disks/emilia/daps/produced/m6_script1_produced.wav
+  Output file: 02_male_m6_script1_produced_sample.wav
+
+Sample 03:
+  Gender: male
+  Original file: m3_script2_produced.wav
+  Source path: /mnt/disks/emilia/daps/produced/m3_script2_produced.wav
+  Output file: 03_male_m3_script2_produced_sample.wav
+
+Sample 04:
+  Gender: male
+  Original file: m6_script3_produced.wav
+  Source path: /mnt/disks/emilia/daps/produced/m6_script3_produced.wav
+  Output file: 04_male_m6_script3_produced_sample.wav
+
+Sample 05:
+  Gender: female
+  Original file: f8_script3_produced.wav
+  Source path: /mnt/disks/emilia/daps/produced/f8_script3_produced.wav
+  Output file: 05_female_f8_script3_produced_sample.wav
+
+Sample 06:
+  Gender: female
+  Original file: f6_script4_produced.wav
+  Source path: /mnt/disks/emilia/daps/produced/f6_script4_produced.wav
+  Output file: 06_female_f6_script4_produced_sample.wav
+
+Sample 07:
+  Gender: female
+  Original file: f4_script2_produced.wav
+  Source path: /mnt/disks/emilia/daps/produced/f4_script2_produced.wav
+  Output file: 07_female_f4_script2_produced_sample.wav
+
+Sample 08:
+  Gender: female
+  Original file: f7_script1_produced.wav
+  Source path: /mnt/disks/emilia/daps/produced/f7_script1_produced.wav
+  Output file: 08_female_f7_script1_produced_sample.wav
+
+Sample 09:
+  Gender: female
+  Original file: f7_script3_produced.wav
+  Source path: /mnt/disks/emilia/daps/produced/f7_script3_produced.wav
+  Output file: 09_female_f7_script3_produced_sample.wav
+

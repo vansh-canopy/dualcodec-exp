@@ -7,6 +7,9 @@ from scipy.signal import resample_poly
 import csv, pathlib
 import matplotlib.pyplot as plt
 
+# Device configuration
+DEVICE: str = "cuda"
+
 from metrics import sisdr, multiscale_stft_loss, visqol_score
 
 
@@ -18,14 +21,31 @@ def load_audio(path: str, required_sr: int = 24000) -> torch.Tensor:
     return torch.from_numpy(data)
 
 
-def load_model():
+def load_models():
     model_id_base = "12hz_v1"
-    dualcodec_model = dualcodec.get_model(model_id_base)
-    dualcodec_inference_model = dualcodec.Inference(dualcodec_model=dualcodec_model)
-    return dualcodec_inference_model
+    base_model = dualcodec.get_model(model_id_base)
+    base_inference_model = dualcodec.Inference(dualcodec_model=base_model)
+    
+    model_id_mine = "12hz_v2"
+    model_path = "/home/vansh/dualcodec-exp/averaged_models"
+    
+    model_1 = dualcodec.get_model(model_id_mine, model_path, name="averaged_model_decay_0.9.safetensors")
+    model_2 = dualcodec.get_model(model_id_mine, model_path, name="averaged_model_decay_0.99.safetensors")
+    model_3 = dualcodec.get_model(model_id_mine, model_path, name="averaged_model_decay_0.999.safetensors")
+    
+    inference_model_1 = dualcodec.Inference(dualcodec_model=model_1)
+    inference_model_2 = dualcodec.Inference(dualcodec_model=model_2)
+    inference_model_3 = dualcodec.Inference(dualcodec_model=model_3)
+    
+    return [
+        ("base_dualcodec", base_inference_model), 
+        ("averaged_dualcodec_decay_0.9", inference_model_1), 
+        ("averaged_dualcodec_decay_0.99", inference_model_2), 
+        ("averaged_dualcodec_decay_0.999", inference_model_3)
+    ]
 
 
-def evaluate(model: torch.nn.Module, samples: list[torch.Tensor], device: str = "cpu") -> dict[str, list[float]]:
+def evaluate(model: torch.nn.Module, samples: list[torch.Tensor], device: str = DEVICE) -> dict[str, list[float]]:
     sisdr_scores, STFT_losses, visqol_scores = [], [], []
     
     with torch.no_grad():
@@ -60,7 +80,7 @@ def evaluate(model: torch.nn.Module, samples: list[torch.Tensor], device: str = 
     
     
 SAMPLES_DIR = "/home/vansh/dualcodec-exp/audio_samples"
-OUTPUT_FILE = "results.csv"
+OUTPUT_DIR = "/home/vansh/dualcodec-exp/eval_results"
 
 
 def main():
@@ -76,47 +96,30 @@ def main():
         samples.append(sample)
     
     print(f"Loaded {len(samples)} wavs from {SAMPLES_DIR}")
+
+    # ensure output directory exists
+    pathlib.Path(OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
     
-    MODELS = [("dualcodec", load_model())]
-
-    fieldnames_summary = ["model", "sisdr", "STFT_loss", "visqol"]
-    summary_rows: list[dict[str, float | str]] = []
-
-    fieldnames_full = ["model", "sample_index", "sisdr", "STFT_loss", "visqol"]
-    full_rows: list[dict[str, float | str]] = []
+    MODELS = load_models()
 
     all_results: dict[str, dict[str, list[float]]] = {}
+    summary_rows: list[dict[str, float | str]] = []
 
     for model_name, model in MODELS:
-        stats = evaluate(model, samples)
+        stats = evaluate(model, samples, device=DEVICE)
         all_results[model_name] = stats
 
-        # compute means
         means = {metric: float(np.mean(values)) for metric, values in stats.items()}
         summary_rows.append({"model": model_name, **means})
-        print(f"Model: {model_name}, SISDR: {means['sisdr']}, STFT_loss: {means['STFT_loss']}, VisQOL: {means['visqol']}")
+        print(f"Model: {model_name}, SISDR: {means['sisdr']:.6f}, STFT_loss: {means['STFT_loss']:.6f}, VisQOL: {means['visqol']:.6f}")
 
-        for idx in range(len(samples)):
-            full_rows.append({
-                "model": model_name,
-                "sample_index": idx,
-                "sisdr": stats["sisdr"][idx],
-                "STFT_loss": stats["STFT_loss"][idx],
-                "visqol": stats["visqol"][idx],
-            })
-
-    # write CSVs
-    with open("results_summary.csv", "w", newline="") as f:
+    fieldnames_summary = ["model", "sisdr", "STFT_loss", "visqol"]
+    with open(pathlib.Path(OUTPUT_DIR) / "results_summary.csv", "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames_summary)
         writer.writeheader()
         writer.writerows(summary_rows)
 
-    with open("results_per_sample.csv", "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames_full)
-        writer.writeheader()
-        writer.writerows(full_rows)
-
-    # Plot metrics per model
+    # Plot metrics per mode
     for metric in ["sisdr", "STFT_loss", "visqol"]:
         plt.figure()
         for model_name, stats in all_results.items():
@@ -126,7 +129,7 @@ def main():
         plt.ylabel(metric)
         plt.legend()
         plt.tight_layout()
-        plt.savefig(f"{metric}_plot.png")
+        plt.savefig(pathlib.Path(OUTPUT_DIR) / f"{metric}_plot.png")
         plt.close()
 
     

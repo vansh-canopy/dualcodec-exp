@@ -5,11 +5,11 @@ from safetensors.torch import load_file, save_file
 
 CHECKPOINT_DIR  = "/home/vansh/dualcodec-exp/output_checkpoints/dualcodec_baseline_12hz_16384_4096_8vq/checkpoints/" 
 OUTPUT_DIR = "/home/vansh/dualcodec-exp/averaged_models/"   
-PREFIX = "epoch-0000_step-"  
+PREFIX = "epoch-0000_step-06"  
 DEVICE = "cuda"
 
 LAST_K_STEPS = 10 
-DECAY_RATES = [0.9, 0.99, 0.999]                       
+DECAY_RATES = [0.9]                       
 
 ROOT = Path(CHECKPOINT_DIR).expanduser().resolve()
 STEP_REGEX = re.compile(r"step-([0-9]*\.?[0-9]+)")  
@@ -45,7 +45,7 @@ def main():
     print(f"Found {len(checkpoints)} ckpts → using {len(chosen)} by recency")
     
     for DECAY in DECAY_RATES:
-        out_file = f"{OUTPUT_DIR}/averaged_model_decay_{DECAY}.safetensors"
+        out_file = f"{OUTPUT_DIR}/averaged_model_step_695000_decay_{DECAY}.safetensors"
         aver_state = {}
         for _, path in chosen:
             sd = load_file(path, device=DEVICE)

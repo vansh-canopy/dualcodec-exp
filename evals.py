@@ -7,7 +7,6 @@ from scipy.signal import resample_poly
 import csv, pathlib
 import matplotlib.pyplot as plt
 
-# Device configuration
 DEVICE: str = "cuda"
 
 from metrics import sisdr, multiscale_stft_loss, visqol_score
@@ -20,57 +19,32 @@ def load_audio(path: str, required_sr: int = 24000) -> torch.Tensor:
         data = resample_poly(data, required_sr // gcd, sr // gcd)
     return torch.from_numpy(data)
 
-
+    
+    
 def load_models():
-    model_id_base = "12hz_v1"
-    base_model = dualcodec.get_model(model_id_base)
-    base_inference_model = dualcodec.Inference(dualcodec_model=base_model)
-    
-    model_id_mine = "12hz_v2"
-    model_path = "/home/vansh/dualcodec-exp/averaged_models"
-    
-    model_1 = dualcodec.get_model(model_id_mine, model_path, name="averaged_model_decay_0.9.safetensors")
-    model_2 = dualcodec.get_model(model_id_mine, model_path, name="averaged_model_decay_0.99.safetensors")
-    model_3 = dualcodec.get_model(model_id_mine, model_path, name="averaged_model_decay_0.999.safetensors")
-    
-    inference_model_1 = dualcodec.Inference(dualcodec_model=model_1)
-    inference_model_2 = dualcodec.Inference(dualcodec_model=model_2)
-    inference_model_3 = dualcodec.Inference(dualcodec_model=model_3)
-    
-    return [
-        ("base_dualcodec", base_inference_model), 
-        ("averaged_dualcodec_decay_0.9", inference_model_1), 
-        ("averaged_dualcodec_decay_0.99", inference_model_2), 
-        ("averaged_dualcodec_decay_0.999", inference_model_3)
-    ]
-    
-    
-    
-def load_models_simpler():
     id_1 = "12hz_v2"
     path_1 = "/home/vansh/dualcodec-exp/averaged_models"
     
-    ema_model = dualcodec.get_model(id_1, path_1, name="averaged_model_decay_0.9.safetensors")
-    ema_inference_model = dualcodec.Inference(dualcodec_model=ema_model)
+    ema_step_1030000_model = dualcodec.get_model(id_1, path_1, name="averaged_model_step_1030000_decay_0.9.safetensors")
+    ema_step_1030000_inference_model = dualcodec.Inference(dualcodec_model=ema_step_1030000_model)
+    
+    ema_step_0695000_model = dualcodec.get_model(id_1, path_1, name="averaged_model_step_0695000_decay_0.9.safetensors")
+    ema_step_0695000_inference_model = dualcodec.Inference(dualcodec_model=ema_step_0695000_model)
     
     id_2 = "12hz_v1"
     base_model = dualcodec.get_model(id_2)
     base_inference_model = dualcodec.Inference(dualcodec_model=base_model)
     
-    checkpoint_path_1 = "home/vansh/dualcodec-exp/output_checkpoints/dualcodec_baseline_12hz_16384_4096_8vq/checkpoints/epoch-0000_step-1030000_loss-96.311798-dualcodec_baseline_12hz_16384_4096_8vq"
+    step_model_path = "/home/vansh/dualcodec-exp/output_checkpoints/dualcodec_baseline_12hz_16384_4096_8vq/checkpoints/epoch-0000_step-0695000_loss-77.563187-dualcodec_baseline_12hz_16384_4096_8vq"
     
-    step_1030000_model = dualcodec.get_model(id_2, checkpoint_path_1, name="model.safetensors")
-    step_1030000_inference_model = dualcodec.Inference(dualcodec_model=step_1030000_model)
-    
-    checkpoint_path_2 = "/home/vansh/dualcodec-exp/output_checkpoints/dualcodec_baseline_12hz_16384_4096_8vq/checkpoints/epoch-0000_step-0695000_loss-77.563187-dualcodec_baseline_12hz_16384_4096_8vq"
-    step_0695000_model = dualcodec.get_model(id_2, checkpoint_path_2, name="model.safetensors")
+    step_0695000_model = dualcodec.get_model(id_2, step_model_path, name="model.safetensors")
     step_0695000_inference_model = dualcodec.Inference(dualcodec_model=step_0695000_model)
     
     return [
-        ("dualcodec_step_1030000", step_1030000_inference_model), 
-        ("dualcodec_step_0695000", step_0695000_inference_model),
-        ("averaged_dualcodec_decay_0.9", ema_inference_model),
-        ("base_dualcodec", base_inference_model),
+       ("base_dualcodec", base_inference_model),
+       ("dualcodec_step_0695000_model", step_0695000_inference_model),
+       ("dualcodec_step_0695000_ema_decay_0.9", ema_step_0695000_inference_model),
+       ("dualcodec_step_1030000_ema_decay_0.9", ema_step_1030000_inference_model),
     ]
 
 
@@ -129,7 +103,7 @@ def main():
     # ensure output directory exists
     pathlib.Path(OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
     
-    MODELS = load_models_simpler()
+    MODELS = load_models()
 
     all_results: dict[str, dict[str, list[float]]] = {}
     summary_rows: list[dict[str, float | str]] = []
@@ -143,7 +117,7 @@ def main():
         print(f"Model: {model_name}, SISDR: {means['sisdr']:.6f}, STFT_loss: {means['STFT_loss']:.6f}, VisQOL: {means['visqol']:.6f}")
 
     fieldnames_summary = ["model", "sisdr", "STFT_loss", "visqol"]
-    with open(pathlib.Path(OUTPUT_DIR) / "results_summary-2.csv", "w", newline="") as f:
+    with open(pathlib.Path(OUTPUT_DIR) / "results_summary-3.csv", "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames_summary)
         writer.writeheader()
         writer.writerows(summary_rows)
@@ -158,7 +132,7 @@ def main():
         plt.ylabel(metric)
         plt.legend()
         plt.tight_layout()
-        plt.savefig(pathlib.Path(OUTPUT_DIR) / f"{metric}_plot-2.png")
+        plt.savefig(pathlib.Path(OUTPUT_DIR) / f"{metric}_plot-3.png")
         plt.close()
 
     

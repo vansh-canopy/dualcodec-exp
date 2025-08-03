@@ -9,7 +9,6 @@ output_checkpoints_4/
 *.pt
 .venv
 whisper-stream-lookahead-3/
-whisper-base-conf/
 w2v-b-2.0/
 dualcodec_ckpts/
 uv.lock

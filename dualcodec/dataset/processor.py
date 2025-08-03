@@ -660,6 +660,11 @@ def _build_whisper_semantic_model(whisper_config_path, whisper_model_path):
     # Load model using its own config to avoid size mismatches
     conf = WhisperConfig.from_pretrained('openai/whisper-base')
     model = CausalWhisperModel.from_pretrained(whisper_model_path, config=conf).eval()
+    
+    # Freeze Whisper parameters so they are not updated during training
+    for param in model.parameters():
+        param.requires_grad = False
+    
     model = model.to(device)
 
     # Hard-coded causal look-ahead mask (lookahead=3, max_len=1500)

@@ -1,6 +1,6 @@
 import os
 
-from datasets import load_dataset, IterableDataset
+from datasets import load_dataset, concatenate_datasets, IterableDataset
 from tqdm import tqdm
 
 

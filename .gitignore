@@ -14,4 +14,4 @@ w2v-b-2.0/
 dualcodec_ckpts/
 uv.lock
 .claude/
-
+.env

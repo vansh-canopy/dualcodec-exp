@@ -110,7 +110,7 @@ class EncoderBlock(nn.Module):
             ResidualUnit(input_dimension, dilation=3),
             ResidualUnit(input_dimension, dilation=9, make_causal=True),
             Snake1d(input_dimension),
-            WNConv1d(
+            CausalWNConv1d(
                 input_dimension,
                 output_dimension,
                 kernel_size=2 * stride,

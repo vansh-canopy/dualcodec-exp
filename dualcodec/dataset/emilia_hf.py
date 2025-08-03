@@ -13,17 +13,33 @@ class EmiliaDataset(IterableDataset):
                 streaming=True,
             )
         else:
-            local_dir = "/mnt/disks/emilia/emilia_dataset/Emilia/EN"
-            tar_paths = [filename for filename in os.listdir(local_dir) if filename.endswith(".tar")]
-            language = "EN"
+            en_directory = "/mnt/disks/emilia/emilia_dataset/Emilia/EN"
+            en_paths = [filename for filename in os.listdir(en_directory) if filename.endswith(".tar")]
+            language_1 = "EN"
             
-            self.dataset = load_dataset(
-                local_dir,
-                data_files={language.lower(): tar_paths},
-                split=language.lower(),
-                num_proc=40,
+            self.ds1 = load_dataset(
+                en_directory,
+                data_files={language_1.lower(): en_paths},
+                split=language_1.lower(),
+                num_proc=50,
                 cache_dir="/mnt/disks/emilia/emilia_cache",
             )
+            
+            zh_directory = "/mnt/disks/emilia/emilia_dataset/Emilia/ZH"
+            zh_paths = [filename for filename in os.listdir(zh_directory) if filename.endswith(".tar")]
+            language_2 = "ZH"
+            
+            self.ds2 = load_dataset(
+                zh_directory,
+                data_files={language_2.lower(): zh_paths},
+                split=language_2.lower(),
+                num_proc=50,
+                cache_dir="/mnt/disks/emilia/emilia_cache",
+            )
+            
+            self.dataset = concatenate_datasets([self.ds1, self.ds2])   # type: ignore
+
+
 
     def __iter__(self):
         for example in self.dataset:

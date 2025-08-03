@@ -208,13 +208,14 @@ class Trainer(BaseTrainer):
             disc_loss = self.gan_loss.discriminator_hinge_loss(generator_out, x_wav)
         else:
             disc_loss = self.gan_loss.discriminator_loss(generator_out, x_wav)
+            
+        disc_loss = disc_loss * 1.05
         
         self.optimizer_d.zero_grad()
         self.accelerator.backward(disc_loss)
         torch.nn.utils.clip_grad_norm_(self.discriminator.parameters(), 1.0)
         self.optimizer_d.step()
         self.optimizer_d.zero_grad()
-
         if USE_HINGE_LOSS:
             adv_loss, feat_loss = self.gan_loss.generator_hinge_loss(
                 generator_out, x_wav
@@ -227,8 +228,8 @@ class Trainer(BaseTrainer):
         
         total_loss = (
             0.25 * commitment_loss 
-            + 2.0 * adv_loss 
-            + 4.0 * feat_loss
+            + 1.0 * adv_loss 
+            + 2.0 * feat_loss
             + 15.0 * spec_loss 
             + 1.0 * codebook_loss
         )

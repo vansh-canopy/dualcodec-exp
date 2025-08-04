@@ -77,6 +77,21 @@ class Trainer(BaseTrainer):
         self.model_module = self.model
         if hasattr(self.model, "module"):
             self.model_module = self.model.module
+            
+        modules_to_freeze = [
+            self.model_module.dac.encoder,
+            self.model_module.dac.quantizer,
+            self.model_module.semantic_vq, 
+            self.model_module.convnext_encoder,
+        ]
+        for m in modules_to_freeze:
+            m.eval()     
+            print("LOLOLOLOLOLOLOLOL", m)
+            for p in m.parameters():
+                p.requires_grad = False
+            
+                
+                
 
     @torch.no_grad()
     @torch.cuda.amp.autocast()
@@ -198,7 +213,6 @@ class Trainer(BaseTrainer):
             first_layer_quantized = out_dict['first_layer_quantized']
         else:
             first_layer_quantized = None
-
 
         # --------- Discriminator training ------------
         if USE_HINGE_LOSS:

@@ -1,11 +1,8 @@
-# Copyright (c) 2025 Amphion.
-#
-# This source code is licensed under the MIT license found in the
-# LICENSE file in the root directory of this source tree.
 import os
 
 from datasets import load_dataset, IterableDataset
 from tqdm import tqdm
+import torch
 from datasets import concatenate_datasets
 
 path = "DE/*.tar"  # only for testing. please use full data
@@ -14,12 +11,37 @@ path = "DE/*.tar"  # only for testing. please use full data
 class EmiliaDataset(IterableDataset):
     def __init__(self, is_debug=True):
         if is_debug:
-            self.ds1 = load_dataset(
-                "amphion/Emilia-Dataset",
-                # data_files={"de": "DE/*.tar"},
+            # self.dataset = load_dataset(
+            #     "amphion/Emilia-Dataset",
+            #     # data_files={"de": "DE/*.tar"},
+            #     split="train",
+            #     streaming=True,
+            # )
+            
+            self.dataset = load_dataset(
+                "vanshjjw/amu-pushed-tara-1000r",
                 split="train",
-                streaming=True,
             )
+            
+            samples = []
+            for example in self.dataset:
+                if "audio" not in example or example["audio"] is None:
+                    continue
+                audio_dict = example["audio"]
+                waveform = torch.tensor(audio_dict["array"], dtype=torch.float32).unsqueeze(0)
+                sr = int(audio_dict["sampling_rate"])
+            
+                samples.append(
+                    {
+                        "mp3": {
+                            "array": waveform.numpy(),
+                            "sampling_rate": sr,
+                        },
+                    }
+                )
+                
+            self.dataset = samples
+            
         else:
             
             en_directory = "/mnt/disks/emilia/emilia_dataset/Emilia/EN"
@@ -47,12 +69,7 @@ class EmiliaDataset(IterableDataset):
             )
             
             self.dataset = concatenate_datasets([self.ds1, self.ds2])   # type: ignore
-            
-            
-        # self.dataset = self.dataset.map(lambda x: x, remove_columns=["text", "text_id"])
-        # self.dataset.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
-        # self.dataset = self.dataset.train_test_split(test_size=0.1)
-        # self.dataset = self.dataset["train"]
+    
 
     def __iter__(self):
         for example in self.dataset:

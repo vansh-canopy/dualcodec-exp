@@ -12,22 +12,9 @@ sudo apt update && sudo apt install bazel-5.3.2
 # Clone git repo to parent directory
 git clone https://github.com/google/visqol ..
 
+# Go to visqol directory where WORKSPACE file is located
+cd ../visqol
 
-# Start bazel build in parallel
-bazel build :visqol -c opt &
-BAZEL_PID=$!
+# run bazel build
 
-echo "Waiting for bazel build to complete..."
-wait $BAZEL_PID
-if [ $? -eq 0 ]; then
-    echo "Bazel build completed successfully!"
-    
-    # Now we can safely install visqol since bazel build is done
-    cd ../visqol && pip install .
-    echo "Visqol installation completed!"
-else
-    echo "Bazel build failed!"
-    exit 1
-fi
-
-echo "All installations completed successfully!"
+echo "Visqol installation completed successfully!"

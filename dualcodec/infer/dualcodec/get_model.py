@@ -6,18 +6,20 @@
 model_id_to_fname = {
     "12hz_v1": "dualcodec_12hz_16384_4096.safetensors",
     "25hz_v1": "dualcodec_25hz_16384_1024.safetensors",
-    "12hz_v2": "",
+    # use v2 for checkpoints
+    "12hz_v2": "model.safetensors",
 }
 model_id_to_cfgname = {
     "12hz_v1": "dualcodec_12hz_16384_4096_8vq.yaml",
-    "12hz_v2": "dualcodec_12hz_16384_4096_8vq.yaml",
     "25hz_v1": "dualcodec_25hz_16384_1024_12vq.yaml",
+    # use v2 for checkpoints
+    "12hz_v2": "dualcodec_12hz_16384_4096_8vq.yaml",
 }
 
 from cached_path import cached_path
 
 
-def get_model(model_id="12hz_v1", pretrained_model_path="hf://amphion/dualcodec", name=None):
+def get_model(model_id="12hz_v1", pretrained_model_path="hf://amphion/dualcodec", strict=True):
     import os
 
     # import importlib.resources as pkg_resources
@@ -46,7 +48,7 @@ def get_model(model_id="12hz_v1", pretrained_model_path="hf://amphion/dualcodec"
         import safetensors
         import safetensors.torch
 
-        safetensors.torch.load_model(model, model_fname)
+        safetensors.torch.load_model(model, model_fname, strict=strict)
         print("Model loaded")
     model.eval()
     return model

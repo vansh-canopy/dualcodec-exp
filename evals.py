@@ -22,30 +22,23 @@ def load_audio(path: str, required_sr: int = 24000) -> torch.Tensor:
     
     
 def load_models():
-    id_1 = "12hz_v2"
-    path_1 = "/home/vansh/dualcodec-exp/averaged_models"
+    base_id = "12hz_v1"
+    base_model = dualcodec.get_model(base_id)
+    base_inference = dualcodec.Inference(dualcodec_model=base_model)
     
-    ema_step_1030000_model = dualcodec.get_model(id_1, path_1, name="averaged_model_step_1030000_decay_0.9.safetensors")
-    ema_step_1030000_inference_model = dualcodec.Inference(dualcodec_model=ema_step_1030000_model)
-    
-    ema_step_0695000_model = dualcodec.get_model(id_1, path_1, name="averaged_model_step_0695000_decay_0.9.safetensors")
-    ema_step_0695000_inference_model = dualcodec.Inference(dualcodec_model=ema_step_0695000_model)
-    
-    id_2 = "12hz_v1"
-    base_model = dualcodec.get_model(id_2)
-    base_inference_model = dualcodec.Inference(dualcodec_model=base_model)
-    
-    step_model_path = "/home/vansh/dualcodec-exp/output_checkpoints/dualcodec_baseline_12hz_16384_4096_8vq/checkpoints/epoch-0000_step-0695000_loss-77.563187-dualcodec_baseline_12hz_16384_4096_8vq"
-    
-    step_0695000_model = dualcodec.get_model(id_2, step_model_path, name="model.safetensors")
-    step_0695000_inference_model = dualcodec.Inference(dualcodec_model=step_0695000_model)
-    
-    return [
-       ("base_dualcodec", base_inference_model),
-       ("dualcodec_step_0695000_model", step_0695000_inference_model),
-       ("dualcodec_step_0695000_ema_decay_0.9", ema_step_0695000_inference_model),
-       ("dualcodec_step_1030000_ema_decay_0.9", ema_step_1030000_inference_model),
-    ]
+    MODELS: list[tuple[str, dualcodec.Inference]] = [("base_dualcodec", base_inference)]
+
+    DIRECTORY_TO_LOAD_FROM = pathlib.Path("/home/vansh/dualcodec-exp/averaged_models")
+
+    averaged_id = "12hz_v3"
+
+    for path in sorted(DIRECTORY_TO_LOAD_FROM.glob("*.safetensors")):
+        filename = path.name  # e.g. averaged_model_step_0795000_decay_0.9.safetensors
+        model = dualcodec.get_model(averaged_id, str(DIRECTORY_TO_LOAD_FROM), name=filename)
+        inference_model = dualcodec.Inference(dualcodec_model=model)
+        MODELS.append((filename, inference_model))
+
+    return MODELS
 
 
 def evaluate(model: torch.nn.Module, samples: list[torch.Tensor], device: str = DEVICE) -> dict[str, list[float]]:
@@ -117,7 +110,7 @@ def main():
         print(f"Model: {model_name}, SISDR: {means['sisdr']:.6f}, STFT_loss: {means['STFT_loss']:.6f}, VisQOL: {means['visqol']:.6f}")
 
     fieldnames_summary = ["model", "sisdr", "STFT_loss", "visqol"]
-    with open(pathlib.Path(OUTPUT_DIR) / "results_summary-3.csv", "w", newline="") as f:
+    with open(pathlib.Path(OUTPUT_DIR) / "results_summary.csv", "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames_summary)
         writer.writeheader()
         writer.writerows(summary_rows)
@@ -132,7 +125,7 @@ def main():
         plt.ylabel(metric)
         plt.legend()
         plt.tight_layout()
-        plt.savefig(pathlib.Path(OUTPUT_DIR) / f"{metric}_plot-3.png")
+        plt.savefig(pathlib.Path(OUTPUT_DIR) / f"{metric}.png")
         plt.close()
 
     

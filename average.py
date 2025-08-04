@@ -5,11 +5,15 @@ from safetensors.torch import load_file, save_file
 
 CHECKPOINT_DIR  = "/home/vansh/dualcodec-exp/output_checkpoints/dualcodec_baseline_12hz_16384_4096_8vq/checkpoints/" 
 OUTPUT_DIR = "/home/vansh/dualcodec-exp/averaged_models/"   
-PREFIX = "epoch-0000_step-06"  
+PREFIX = "epoch-0000_step-"  
 DEVICE = "cuda"
 
 LAST_K_STEPS = 10 
-DECAY_RATES = [0.9]                       
+DECAY_RATES = [0.9]
+
+# Only consider checkpoints whose training step falls within this range (inclusive)
+MIN_STEP = 695000         # lower bound; change as needed
+MAX_STEP = 895000         # upper bound; change as needed                       
 
 ROOT = Path(CHECKPOINT_DIR).expanduser().resolve()
 STEP_REGEX = re.compile(r"step-([0-9]*\.?[0-9]+)")  
@@ -25,6 +29,8 @@ def find_checkpoints(root: Path, prefix: str):
         m = STEP_REGEX.search(folder)
         if m:
             step_val = float(m.group(1))
+            if not (MIN_STEP <= step_val <= MAX_STEP):
+                continue
             candidates.append((step_val, ckp))
     
     return sorted(candidates, key=lambda x: -x[0])
@@ -42,10 +48,10 @@ def ema_average(av, new, decay_factor):
 def main():
     checkpoints = find_checkpoints(ROOT, PREFIX)
     chosen = checkpoints[:LAST_K_STEPS] if LAST_K_STEPS else checkpoints
-    print(f"Found {len(checkpoints)} ckpts → using {len(chosen)} by recency")
+    print(f"Found {len(checkpoints)} ckpts, using {len(chosen)} by recency")
     
     for DECAY in DECAY_RATES:
-        out_file = f"{OUTPUT_DIR}/averaged_model_step_695000_decay_{DECAY}.safetensors"
+        out_file = f"{OUTPUT_DIR}/averaged_model_step_0{MAX_STEP}_decay_{DECAY}.safetensors"
         aver_state = {}
         for _, path in chosen:
             sd = load_file(path, device=DEVICE)

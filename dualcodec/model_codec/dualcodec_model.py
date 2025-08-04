@@ -25,9 +25,10 @@ from easydict import EasyDict as edict
 import torch.nn.functional as F
 import random
 from einops import rearrange
+from huggingface_hub import PyTorchModelHubMixin
 
 
-class DualCodec(nn.Module):
+class DualCodec(nn.Module,  PyTorchModelHubMixin):
     def __init__(
         self,
         encoder_dim: int = 64,

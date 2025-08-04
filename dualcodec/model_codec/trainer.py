@@ -86,7 +86,6 @@ class Trainer(BaseTrainer):
         ]
         for m in modules_to_freeze:
             m.eval()     
-            print("LOLOLOLOLOLOLOLOL", m)
             for p in m.parameters():
                 p.requires_grad = False
             

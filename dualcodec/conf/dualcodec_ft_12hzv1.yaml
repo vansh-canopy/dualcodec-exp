@@ -29,10 +29,10 @@ trainer:
     train:
       max_steps: 1000000
       save_checkpoint_stride:
-        - 50
-      keep_last: [1]
+        - 200
+      keep_last: [100]
       disable_mixed_precision: true
       optimizer: 
-        lr: 1e-2
+        lr: 1e-5
       adamw:
-        lr: 1e-2
+        lr: 1e-5

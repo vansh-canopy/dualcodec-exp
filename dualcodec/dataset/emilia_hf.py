@@ -19,18 +19,16 @@ class EmiliaDataset(IterableDataset):
             # )
             
             self.dataset = load_dataset(
-                "vanshjjw/amu-pushed-tara-1000r",
+                "vanshjjw/amu-pushed-luna-4500r",
                 split="train",
             )
             
             samples = []
-            for example in self.dataset:
-                if "audio" not in example or example["audio"] is None:
-                    continue
-                audio_dict = example["audio"]
+            for example in self.dataset[:4200]:
+                audio_dict = example["enhanced_audio"]
                 waveform = torch.tensor(audio_dict["array"], dtype=torch.float32).unsqueeze(0)
                 sr = int(audio_dict["sampling_rate"])
-            
+    
                 samples.append(
                     {
                         "mp3": {

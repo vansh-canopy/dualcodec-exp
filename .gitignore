@@ -3,6 +3,7 @@ output_checkpoints/
 output_checkpoints_2/
 output_checkpoints_3/
 output_checkpoints_4/
+averaged_models/
 w2v-bert-2.0/
 *.pyc
 *.safetensors

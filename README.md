@@ -54,6 +54,35 @@ This will create new directories and install dualcodec checkpoints, wav2vec, whi
 
 ---
 
+## 5. Set up & run evaluations
+
+The evaluation scripts rely on [VISQOL](https://github.com/google/visqol) for
+perceptual quality scoring and on several other metrics implemented in
+`metrics.py` (SI-SDR, Multiscale-STFT, etc\.).  A convenience script takes care
+of installing the requirements and building VISQOL.
+
+```bash
+bash evals.sh  # installs Bazel & clones/compiles VISQOL in ../visqol
+```
+
+What the script does:
+
+1. Installs **Bazel** (required to build VISQOL)
+2. Clones the official VISQOL repository into the **parent directory** of this
+   project (i\.e\. `../visqol`)
+3. Builds the C++ library via `bazel build` (see the script for details)
+
+Once it finishes you can run the Python evaluation harness:
+
+```bash
+python evals.py
+```
+
+All metric implementations live in `metrics.py`; feel free to extend or swap
+out as needed.
+
+---
+
 ## 6. Ready to hack 🚀
 
 Check the Hydra configuration files in `dualcodec/conf/` for training &

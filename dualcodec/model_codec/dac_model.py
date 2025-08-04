@@ -346,7 +346,12 @@ class DAC(BaseModel):
     ):
         length = audio_data.shape[-1]
         audio_data = self.preprocess(audio_data, sample_rate)
+        
+        print(f"LOLOLOLOLOLOLOLOLOLOLOL, audio_data.shape: {audio_data.shape}, sample_rate: {sample_rate}")
+        
         z = self.encoder(audio_data)
+        
+        print(f"LOLOLOLOLOLOLOLOLOLOLOL, z.shape: {z.shape}")
       
         if subtracted_latent is not None:
             assert (z.shape[-1] - subtracted_latent.shape[-1]) <= 2

@@ -26,4 +26,4 @@ def main(do_push=True):
     
 
 if __name__ == "__main__":
-    main(do_push=True)
+    main(do_push=False)

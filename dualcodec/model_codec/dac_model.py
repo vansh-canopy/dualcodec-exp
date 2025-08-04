@@ -50,8 +50,8 @@ class CausalWNConv1d(nn.Module):
         return self.conv.dilation
 
     def forward(self, x):
-        k, d = self.kernel_size[0], self.dilation[0]
-        left_pad = (k - 1) * d
+        k, d, s = self.kernel_size[0], self.dilation[0], self.conv.stride[0]
+        left_pad = (k - 1) * d + (1 - s)
         x = F.pad(x, (left_pad, 0))        
         return self.conv(x)                
 
@@ -114,8 +114,7 @@ class EncoderBlock(nn.Module):
                 input_dimension,
                 output_dimension,
                 kernel_size=2 * stride,
-                stride=stride,
-                padding=math.ceil(stride / 2),
+                stride=stride
             ),
         )
 
@@ -132,7 +131,7 @@ class Encoder(nn.Module):
     ):
         super().__init__()
         
-        self.block = [CausalWNConv1d(1, encoder_dim, kernel_size=7, padding=3)]
+        self.block = [CausalWNConv1d(1, encoder_dim, kernel_size=7)]
 
         for stride in encoder_rates:
             encoder_dim = encoder_dim * 2
@@ -140,7 +139,7 @@ class Encoder(nn.Module):
 
         self.block += [
             Snake1d(encoder_dim),
-            CausalWNConv1d(encoder_dim, latent_dim, kernel_size=3, padding=1),
+            CausalWNConv1d(encoder_dim, latent_dim, kernel_size=3),
         ]
 
         self.block = nn.Sequential(*self.block)
@@ -347,7 +346,12 @@ class DAC(BaseModel):
     ):
         length = audio_data.shape[-1]
         audio_data = self.preprocess(audio_data, sample_rate)
+        
+        print(f"LOLOLOLOLOLOLOLOLOLOLOL, audio_data.shape: {audio_data.shape}, sample_rate: {sample_rate}")
+        
         z = self.encoder(audio_data)
+        
+        print(f"LOLOLOLOLOLOLOLOLOLOLOL, z.shape: {z.shape}")
       
         if subtracted_latent is not None:
             assert (z.shape[-1] - subtracted_latent.shape[-1]) <= 2

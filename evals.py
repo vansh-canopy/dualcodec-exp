@@ -28,21 +28,23 @@ def load_models():
     
     # MODELS: list[tuple[str, dualcodec.Inference]] = [("jianqi_dualcodec", base_inference)]
     
-    model_with_whisper_id = "12hz_v2
+    MODELS: list[tuple[str, dualcodec.Inference]] = []
     
+    my_model_path = "hf://vanshjjw/vansh-dualcodec-step-1.030"
+    my_model = dualcodec.get_model(base_id, my_model_path, name="model.safetensors")
+    my_inference = dualcodec.Inference(dualcodec_model=my_model)
+    MODELS.append(("vansh_dualcodec", my_inference))
     
-    # my_model_path = "hf://vanshjjw/vansh-dualcodec-step-1.030"
-    # my_model = dualcodec.get_model(model_with_whisper_id, my_model_path, name="model.safetensors")
-    # my_inference = dualcodec.Inference(dualcodec_model=my_model)
-    # MODELS.append(("vansh_dualcodec", my_inference))
+    print(f"my_model: {my_model}")
+    exit()
     
-    # DIRECTORY_TO_LOAD_FROM = pathlib.Path("/home/vansh/dualcodec-vansh/averaged_models")
+    DIRECTORY_TO_LOAD_FROM = pathlib.Path("/home/vansh/dualcodec-vansh/averaged_models")
 
-    # for path in sorted(DIRECTORY_TO_LOAD_FROM.glob("*.safetensors")):
-    #     filename = path.name  # e.g. averaged_model_step_0795000_decay_0.9.safetensors
-    #     model = dualcodec.get_model(model_with_whisper_id, str(DIRECTORY_TO_LOAD_FROM), name=filename)
-    #     inference_model = dualcodec.Inference(dualcodec_model=model)
-    #     MODELS.append((filename, inference_model))
+    for path in sorted(DIRECTORY_TO_LOAD_FROM.glob("*.safetensors")):
+        filename = path.name  # e.g. averaged_model_step_0795000_decay_0.9.safetensors
+        model = dualcodec.get_model(base_id, str(DIRECTORY_TO_LOAD_FROM), name=filename)
+        inference_model = dualcodec.Inference(dualcodec_model=model)
+        MODELS.append((filename, inference_model))
 
     return MODELS
 

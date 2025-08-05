@@ -1,7 +1,7 @@
 defaults:
   - data: emilia_hf_raw_audio_static_batch_with_whisper
   - machine: devbox
-  - model: dualcodec_12hz_16384_4096_8vq
+  - model: dualcodec_12hz_16384_4096_8vq_stream
   - trainer: codec_model_with_whisper
   - _self_
 hydra:

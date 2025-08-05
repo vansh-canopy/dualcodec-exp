@@ -3,7 +3,10 @@ model_id_to_fname = {
     "25hz_v1": "dualcodec_25hz_16384_1024.safetensors",
 }
 model_id_to_cfgname = {
-    "12hz_v1": "dualcodec_12hz_16384_4096_8vq.yaml",
+    # base model
+    "12hz_v1": "dualcodec_12hz_16384_4096_8vq_base.yaml",
+    # my stream model
+    "12hz_v2": "dualcodec_12hz_16384_4096_8vq_stream.yaml",
     "25hz_v1": "dualcodec_25hz_16384_1024_12vq.yaml",
 }
 

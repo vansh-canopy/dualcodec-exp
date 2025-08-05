@@ -5,40 +5,43 @@ from tqdm import tqdm
 import torch
 from datasets import concatenate_datasets
 
-import numpy as np
-
-def _to_mp3(example):
-    audio_dict = example["enhanced_audio"]
-    waveform = np.asarray(audio_dict["array"], dtype=np.float32)[None, :]  # add channel dim
-    sr = int(audio_dict["sampling_rate"])
-    return {
-        "mp3": {
-            "array": waveform,
-            "sampling_rate": sr,
-        }
-    }
+path = "DE/*.tar"  # only for testing. please use full data
 
 
 class EmiliaDataset(IterableDataset):
     def __init__(self, is_debug=True):
         if is_debug:
+            # self.dataset = load_dataset(
+            #     "amphion/Emilia-Dataset",
+            #     # data_files={"de": "DE/*.tar"},
+            #     split="train",
+            #     streaming=True,
+            # )
             
             self.dataset = load_dataset(
                 "vanshjjw/amu-pushed-luna-4500r",
                 split="train",
             )
             
-            self.dataset = self.dataset.map(
-                _to_mp3,
-                remove_columns=self.dataset.column_names,
-                num_proc=4,
-                desc="Converting enhanced_audio to emilia compatible processor pipeline",
-            )
-            # Keep only the first 4 000 rows as a Dataset object (not list)
-            self.dataset = self.dataset.select(range(4300))
+            samples = []
+            for example in self.dataset:
+                audio_dict = example["enhanced_audio"]
+                waveform = torch.tensor(audio_dict["array"], dtype=torch.float32).unsqueeze(0)
+                sr = int(audio_dict["sampling_rate"])
+    
+                samples.append(
+                    {
+                        "mp3": {
+                            "array": waveform.numpy(),
+                            "sampling_rate": sr,
+                        },
+                    }
+                )
+                
+            self.dataset = samples
             
         else:
-
+            
             en_directory = "/mnt/disks/emilia/emilia_dataset/Emilia/EN"
             en_paths = [filename for filename in os.listdir(en_directory) if filename.endswith(".tar")]
             language_1 = "EN"

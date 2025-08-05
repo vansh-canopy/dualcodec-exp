@@ -209,7 +209,6 @@ class Trainer(BaseTrainer):
         else:
             disc_loss = self.gan_loss.discriminator_loss(generator_out, x_wav)
             
-        disc_loss = disc_loss * 1.05
         
         self.optimizer_d.zero_grad()
         self.accelerator.backward(disc_loss)

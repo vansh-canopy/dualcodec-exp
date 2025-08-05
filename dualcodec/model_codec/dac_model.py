@@ -110,11 +110,11 @@ class EncoderBlock(nn.Module):
             ResidualUnit(input_dimension, dilation=3),
             ResidualUnit(input_dimension, dilation=9),
             Snake1d(input_dimension),
-            WNConv1d(
+            CausalWNConv1d(
                 input_dimension,
                 output_dimension,
                 kernel_size=2 * stride,
-                stride=stride
+                stride=stride,
             ),
         )
 
@@ -131,7 +131,7 @@ class Encoder(nn.Module):
     ):
         super().__init__()
         
-        self.block = [WNConv1d(1, encoder_dim, kernel_size=7)]
+        self.block = [WNConv1d(1, encoder_dim, kernel_size=7, padding=3)]
 
         for stride in encoder_rates:
             encoder_dim = encoder_dim * 2
@@ -139,7 +139,7 @@ class Encoder(nn.Module):
 
         self.block += [
             Snake1d(encoder_dim),
-            WNConv1d(encoder_dim, latent_dim, kernel_size=3),
+            WNConv1d(encoder_dim, latent_dim, kernel_size=3, padding=1),
         ]
 
         self.block = nn.Sequential(*self.block)

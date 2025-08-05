@@ -15,7 +15,7 @@ import os
 import safetensors
 import safetensors.torch
 
-def get_model(model_id="12hz_v1", pretrained_model_path="hf://amphion/dualcodec", is_checkpoint=False, strict=False):
+def get_model(model_id="12hz_v1", pretrained_model_path="hf://amphion/dualcodec", name=None, strict=False):
     with initialize(version_base="1.3", config_path="../../conf/model"):
         cfg = hydra.compose(config_name=model_id_to_cfgname[model_id], overrides=[])
         model = hydra.utils.instantiate(cfg.model)
@@ -28,10 +28,10 @@ def get_model(model_id="12hz_v1", pretrained_model_path="hf://amphion/dualcodec"
         pretrained_model_path = cached_path(pretrained_model_path)
         print("pretrained_model_path", pretrained_model_path)
         
-        if is_checkpoint:
-            model_fname = os.path.join(pretrained_model_path, "model.safetensors")
-        else:
-            model_fname = os.path.join(pretrained_model_path, model_id_to_fname[model_id])
+        if name is None:
+            name = model_id_to_fname[model_id]
+        
+        model_fname = os.path.join(pretrained_model_path, name)
         
         print("Loading model from here", model_fname)
         safetensors.torch.load_model(model, model_fname, strict=strict)

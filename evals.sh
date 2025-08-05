@@ -10,11 +10,18 @@ sudo apt update && sudo apt install bazel
 sudo apt update && sudo apt install bazel-5.3.2
 
 # Clone git repo to parent directory
-git clone https://github.com/google/visqol ..
+git clone https://github.com/google/visqol ../visqol
 
 # Go to visqol directory where WORKSPACE file is located
 cd ../visqol
 
 # run bazel build
+bazel build :visqol -c opt
+
+echo "Visqol build completed successfully!"
+
+# install visqol
+cd ../visqol
+pip install .
 
 echo "Visqol installation completed successfully!"

@@ -106,7 +106,7 @@ datalist:
 segment_speech:
   _target_: dualcodec.dataset.processor.segment_speech
   _partial_: true
-  segment_length: 24000 # frames
+  segment_length: 76800 # frames
 
 data_pipeline:
   - ${..gluster_opener}

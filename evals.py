@@ -7,7 +7,7 @@ from scipy.signal import resample_poly
 import csv, pathlib
 import matplotlib.pyplot as plt
 
-DEVICE: str = "cuda"
+DEVICE: str = "cpu"
 
 from metrics import sisdr, multiscale_stft_loss, visqol_score
 

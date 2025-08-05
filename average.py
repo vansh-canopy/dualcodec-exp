@@ -13,7 +13,7 @@ DECAY_RATES = [0.95, 0.9, 0.85]
 
 # Only consider checkpoints whose training step falls within this range (inclusive)
 MIN_STEP = 210000         # lower bound; change as needed
-MAX_STEP = 260000         # upper bound; change as needed                       
+MAX_STEP = 345000         # upper bound; change as needed                       
 
 ROOT = Path(CHECKPOINT_DIR).expanduser().resolve()
 STEP_REGEX = re.compile(r"step-([0-9]*\.?[0-9]+)")  

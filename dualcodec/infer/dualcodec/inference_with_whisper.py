@@ -100,10 +100,7 @@ class InferenceWhisper:
         elif audio_16k.dim() == 2:
             audio_input = audio_16k[0].cpu()
         else:
-            audio_input = audio_16k.cpu()
-        
-        print("audio_16k.shape", audio_16k.shape)    
-        print("audio_input.shape", audio_input.shape)        
+            audio_input = audio_16k.cpu()     
 
         feat_extractor = self.semantic_cfg["feature_extractor"]
         inputs = feat_extractor(audio_input, sampling_rate=16000, return_tensors="pt")

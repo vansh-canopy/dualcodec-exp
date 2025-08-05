@@ -114,26 +114,18 @@ class Inference:
         - acoustic_codes: torch.Tensor, shape=(B, num_vq-1, T), dtype=torch.int, acoustic codes
         """
         audio_16k = torchaudio.functional.resample(audio, 24000, 16000)
-        
-        print(f"audio_16k.shape: {audio_16k.shape}")
 
         feature_extractor = self.semantic_cfg.feature_extractor
         inputs = feature_extractor(
             audio_16k.cpu(), sampling_rate=16000, return_tensors="pt"
         )
-        
-        print(f"inputs: {inputs}")
+    
         input_features = inputs["input_features"][0]
         attention_mask = inputs["attention_mask"][0]
-        
-        print(f"input_features.shape: {input_features.shape}")
-        print(f"attention_mask.shape: {attention_mask.shape}")
 
         input_features = input_features.unsqueeze(0).to(self.device)
         attention_mask = attention_mask.unsqueeze(0).to(self.device)
         audio = audio.to(self.device)
-
-        print(f"input_features.shape: {input_features.shape}")
 
         # by default, we use autocast for semantic feature extraction
         with torch.autocast(device_type=self.device, dtype=torch.float16):
@@ -141,15 +133,11 @@ class Inference:
                 input_features, attention_mask
             ).transpose(1, 2)
             
-            print(f"feat.shape: {feat.shape}")
-
             feat = torch.nn.functional.avg_pool1d(
                 feat,
                 self.model.semantic_downsample_factor,
                 self.model.semantic_downsample_factor,
             )
-            
-            print(f"feat.shape after avg_pool1d: {feat.shape}")
 
         if self.autocast:
             ctx = torch.autocast(device_type=self.device, dtype=torch.float16)

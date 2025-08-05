@@ -24,7 +24,7 @@ class EmiliaDataset(IterableDataset):
             )
             
             samples = []
-            for example in self.dataset[:4200]:
+            for example in self.dataset:
                 audio_dict = example["enhanced_audio"]
                 waveform = torch.tensor(audio_dict["array"], dtype=torch.float32).unsqueeze(0)
                 sr = int(audio_dict["sampling_rate"])

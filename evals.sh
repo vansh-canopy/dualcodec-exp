@@ -16,5 +16,6 @@ git clone https://github.com/google/visqol ..
 cd ../visqol
 
 # run bazel build
+bazel build :visqol -c opt
 
 echo "Visqol installation completed successfully!"

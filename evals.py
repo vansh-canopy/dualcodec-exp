@@ -78,8 +78,8 @@ def evaluate(model: torch.nn.Module, samples: list[torch.Tensor], device: str = 
     }
     
     
-SAMPLES_DIR = "/home/vansh/dualcodec-exp/audio_samples"
-OUTPUT_DIR = "/home/vansh/dualcodec-exp/eval_results"
+SAMPLES_DIR = "/home/vansh/dualcodec-vansh/audio_samples"
+OUTPUT_DIR = "/home/vansh/dualcodec-vansh/eval_results"
 
 
 def main():

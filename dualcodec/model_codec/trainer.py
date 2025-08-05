@@ -369,9 +369,7 @@ class Trainer(BaseTrainer):
         elif resume_type == "finetune":
             # Load only the model weights
             import safetensors.torch
-            
 
-            import safetensors.torch
             from safetensors.torch import load_file
 
             # ---- Safe load for generator ----
@@ -393,6 +391,19 @@ class Trainer(BaseTrainer):
             self.logger.info(
                 f"Loaded {len(disc_filtered)} compatible tensors into discriminator from {disc_ckpt_path}. Skipped {len(disc_tensors) - len(disc_filtered)} incompatible tensors."
             )
+            
+            # for p in self.model.dac.encoder.parameters():
+            #     p.requires_grad = False
+            
+            # for p in self.model.dac.quantizer.parameters():
+            #     p.requires_grad = False
+            
+            # for p in self.model.semantic_vq.parameters():
+            #     p.requires_grad = False
+            
+            # for p in self.model.convnext_encoder.parameters():
+            #     p.requires_grad = False
+            
 
         else:
             raise ValueError("Resume_type must be `resume` or `finetune`.")

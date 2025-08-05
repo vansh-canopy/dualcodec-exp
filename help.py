@@ -29,7 +29,7 @@ model.eval()
 # Build inference wrapper WITHOUT autocast to remove FP16 rounding noise
 inference = dualcodec.Inference(dualcodec_model=model, device=DEVICE, autocast=False)
 
-path = "/home/vansh/dualcodec-exp/output_checkpoints/dualcodec_25hzv1_finetune/checkpoint/epoch-0019_step-0096200_loss-84.472580-dualcodec_25hzv1_finetune"
+path = "/home/vansh/dualcodec-exp/output_checkpoints_rough/dualcodec_25hzv1_finetune/checkpoint/epoch-0022_step-0114800_loss-71.511154-dualcodec_25hzv1_finetune"
 
 model_2 = dualcodec.get_model(MODEL_ID, path, name="model.safetensors")
 model_2.eval()

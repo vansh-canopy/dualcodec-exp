@@ -78,16 +78,16 @@ class Trainer(BaseTrainer):
         if hasattr(self.model, "module"):
             self.model_module = self.model.module
             
-        modules_to_freeze = [
-            self.model_module.dac.encoder,
-            self.model_module.dac.quantizer,
-            self.model_module.semantic_vq, 
-            self.model_module.convnext_encoder,
-        ]
-        for m in modules_to_freeze:
-            m.eval()     
-            for p in m.parameters():
-                p.requires_grad = False
+        # modules_to_freeze = [
+        #     self.model_module.dac.encoder,
+        #     self.model_module.dac.quantizer,
+        #     self.model_module.semantic_vq, 
+        #     self.model_module.convnext_encoder,
+        # ]
+        # for m in modules_to_freeze:
+        #     m.eval()     
+        #     for p in m.parameters():
+        #         p.requires_grad = False
             
                 
                 
@@ -391,18 +391,6 @@ class Trainer(BaseTrainer):
             self.logger.info(
                 f"Loaded {len(disc_filtered)} compatible tensors into discriminator from {disc_ckpt_path}. Skipped {len(disc_tensors) - len(disc_filtered)} incompatible tensors."
             )
-            
-            # for p in self.model.dac.encoder.parameters():
-            #     p.requires_grad = False
-            
-            # for p in self.model.dac.quantizer.parameters():
-            #     p.requires_grad = False
-            
-            # for p in self.model.semantic_vq.parameters():
-            #     p.requires_grad = False
-            
-            # for p in self.model.convnext_encoder.parameters():
-            #     p.requires_grad = False
             
 
         else:

@@ -9,7 +9,7 @@ hydra:
     dir: ${machine.log_dir}/${trainer.exp_name}
 
 trainer:
-  exp_name: dualcodec_25hzv1_finetune_2
+  exp_name: dualcodec_25hzv1_finetune_3_all_params
   max_tokens: 2000
   batch_size: 10
   args:

@@ -78,16 +78,16 @@ class Trainer(BaseTrainer):
         if hasattr(self.model, "module"):
             self.model_module = self.model.module
             
-        # modules_to_freeze = [
-        #     self.model_module.dac.encoder,
-        #     self.model_module.dac.quantizer,
-        #     self.model_module.semantic_vq, 
-        #     self.model_module.convnext_encoder,
-        # ]
-        # for m in modules_to_freeze:
-        #     m.eval()     
-        #     for p in m.parameters():
-        #         p.requires_grad = False
+        modules_to_freeze = [
+            self.model_module.dac.encoder,
+            self.model_module.dac.quantizer,
+            self.model_module.semantic_vq, 
+            self.model_module.convnext_encoder,
+        ]
+        for m in modules_to_freeze:
+            m.eval()     
+            for p in m.parameters():
+                p.requires_grad = False
             
                 
                 

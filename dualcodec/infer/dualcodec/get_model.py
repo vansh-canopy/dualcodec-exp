@@ -6,18 +6,10 @@
 model_id_to_fname = {
     "12hz_v1": "dualcodec_12hz_16384_4096.safetensors",
     "25hz_v1": "dualcodec_25hz_16384_1024.safetensors",
-    # use v2 for checkpoints
-    "12hz_v2": "model.safetensors",
-    # use v3 for averaged model (needs custom names)
-    "12hz_v3": "",
 }
 model_id_to_cfgname = {
     "12hz_v1": "dualcodec_12hz_16384_4096_8vq.yaml",
     "25hz_v1": "dualcodec_25hz_16384_1024_12vq.yaml",
-    # use v2 for checkpoints
-    "12hz_v2": "dualcodec_12hz_16384_4096_8vq.yaml",
-    # use v3 for averaged model
-    "12hz_v3": "dualcodec_12hz_16384_4096_8vq.yaml",
 }
 
 from cached_path import cached_path

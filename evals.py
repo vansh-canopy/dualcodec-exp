@@ -30,11 +30,9 @@ def load_models():
 
     DIRECTORY_TO_LOAD_FROM = pathlib.Path("/home/vansh/dualcodec-exp/averaged_models")
 
-    averaged_id = "12hz_v3"
-
     for path in sorted(DIRECTORY_TO_LOAD_FROM.glob("*.safetensors")):
         filename = path.name  # e.g. averaged_model_step_0795000_decay_0.9.safetensors
-        model = dualcodec.get_model(averaged_id, str(DIRECTORY_TO_LOAD_FROM), name=filename)
+        model = dualcodec.get_model(base_id, str(DIRECTORY_TO_LOAD_FROM), name=filename)
         inference_model = dualcodec.Inference(dualcodec_model=model)
         MODELS.append((filename, inference_model))
 

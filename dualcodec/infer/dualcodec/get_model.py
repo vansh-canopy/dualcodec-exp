@@ -15,7 +15,7 @@ model_id_to_cfgname = {
 from cached_path import cached_path
 
 
-def get_model(model_id="12hz_v1", pretrained_model_path="hf://amphion/dualcodec", name=None, strict=False):
+def get_model(model_id="12hz_v1", pretrained_model_path="hf://amphion/dualcodec", name=None, strict=True):
     import os
 
     # import importlib.resources as pkg_resources
@@ -31,7 +31,6 @@ def get_model(model_id="12hz_v1", pretrained_model_path="hf://amphion/dualcodec"
 
     if pretrained_model_path is None:
         import warnings
-
         warnings.warn(
             "pretrained_model_path is not given, model will be loaded without weights"
         )
@@ -41,31 +40,10 @@ def get_model(model_id="12hz_v1", pretrained_model_path="hf://amphion/dualcodec"
         
         model_fname = os.path.join(pretrained_model_path, name)
         print("Loading model from", model_fname)
+        import safetensors
         import safetensors.torch
-        from safetensors.torch import load_file
-        import torch
-
-        # Load tensors from the safetensors file
-        pretrained_tensors = load_file(model_fname)
-
-        # Current model parameters
-        model_state = model.state_dict()
-        filtered_tensors = {}
-        skipped_tensors = []
-        for k, v in pretrained_tensors.items():
-            if k in model_state and model_state[k].shape == v.shape:
-                filtered_tensors[k] = v
-            else:
-                skipped_tensors.append(k)
-
-        # Load only matching tensors
-        missing_keys, unexpected_keys = model.load_state_dict(filtered_tensors, strict=False)
-        print(
-            f"Loaded {len(filtered_tensors)} tensors, skipped {len(skipped_tensors)} incompatible tensors."
-        )
-        if missing_keys:
-            print(f"Missing keys after load: {len(missing_keys)} (first 10 shown): {missing_keys[:10]}")
-        if unexpected_keys:
-            print(f"Unexpected keys after load: {len(unexpected_keys)} (first 10 shown): {unexpected_keys[:10]}")
+        safetensors.torch.load_model(model, model_fname, strict=strict)
+        print("Model loaded")
+    
     model.eval()
     return model

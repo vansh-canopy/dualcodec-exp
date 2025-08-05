@@ -7,7 +7,7 @@ from scipy.signal import resample_poly
 import csv, pathlib
 import matplotlib.pyplot as plt
 
-DEVICE: str = "cuda"
+DEVICE: str = "cuda:3"
 
 from metrics import sisdr, multiscale_stft_loss, visqol_score
 
@@ -38,6 +38,30 @@ def load_models():
 
     return MODELS
 
+
+def load_models_hf():
+    base_id = "12hz_v1"
+    base_model = dualcodec.get_model(base_id)
+    base_inference = dualcodec.Inference(dualcodec_model=base_model)
+    
+    MODELS: list[tuple[str, dualcodec.Inference]] = [("base_dualcodec", base_inference)]
+    
+    path_1 = "hf://vanshjjw/vansh-dualcodec-step-1.030"
+    path_2 = "hf://vanshjjw/vansh-dualcodec-step-0.795"
+    
+    base_model_vansh = dualcodec.get_model(base_id, path_1, name="model.safetensors")
+    base_vansh_inference = dualcodec.Inference(dualcodec_model=base_model_vansh)
+    
+    MODELS.append(("vansh_step_1.030", base_vansh_inference))
+    
+    base_model_vansh_2 = dualcodec.get_model(base_id, path_2, name="model.safetensors")
+    base_vansh_inference_2 = dualcodec.Inference(dualcodec_model=base_model_vansh_2)
+    
+    MODELS.append(("vansh_step_0.795", base_vansh_inference_2))
+    
+    return MODELS
+    
+    
 
 def evaluate(model: torch.nn.Module, samples: list[torch.Tensor], device: str = DEVICE) -> dict[str, list[float]]:
     sisdr_scores, STFT_losses, visqol_scores = [], [], []
@@ -94,7 +118,7 @@ def main():
     # ensure output directory exists
     pathlib.Path(OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
     
-    MODELS = load_models()
+    MODELS = load_models_hf()
 
     all_results: dict[str, dict[str, list[float]]] = {}
     summary_rows: list[dict[str, float | str]] = []

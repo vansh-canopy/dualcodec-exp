@@ -21,12 +21,11 @@ import dualcodec
 
 MODEL_ID = "12hz_v1"    
 
-DEVICE = "cuda"
+DEVICE = "cuda:3"
 
 model = dualcodec.get_model(MODEL_ID)
 model.eval()
 
-# Build inference wrapper WITHOUT autocast to remove FP16 rounding noise
 inference = dualcodec.Inference(dualcodec_model=model, device=DEVICE, autocast=False)
 
 path = "/home/vansh/dualcodec-exp/output_checkpoints_rough/dualcodec_25hzv1_finetune/checkpoint/epoch-0022_step-0114800_loss-71.511154-dualcodec_25hzv1_finetune"

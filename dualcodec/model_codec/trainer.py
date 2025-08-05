@@ -369,20 +369,30 @@ class Trainer(BaseTrainer):
         elif resume_type == "finetune":
             # Load only the model weights
             import safetensors.torch
+            
 
-            safetensors.torch.load_model(
-                self.accelerator.unwrap_model(self.model),
-                os.path.join(
-                    checkpoint_path, self.args.model_1_name
-                ),  # location of "model_1.safetensors"
+            import safetensors.torch
+            from safetensors.torch import load_file
+
+            # ---- Safe load for generator ----
+            gen_ckpt_path = os.path.join(checkpoint_path, self.args.model_1_name)
+            gen_tensors = load_file(gen_ckpt_path)
+            gen_state = self.accelerator.unwrap_model(self.model).state_dict()
+            gen_filtered = {k: v for k, v in gen_tensors.items() if k in gen_state and gen_state[k].shape == v.shape}
+            self.accelerator.unwrap_model(self.model).load_state_dict(gen_filtered, strict=False)
+            self.logger.info(
+                f"Loaded {len(gen_filtered)} compatible tensors into generator from {gen_ckpt_path}. Skipped {len(gen_tensors) - len(gen_filtered)} incompatible tensors."
             )
-            safetensors.torch.load_model(
-                self.accelerator.unwrap_model(self.discriminator),
-                os.path.join(
-                    checkpoint_path, self.args.model_2_name
-                ),  # location of "model_2.safetensors"
+
+            # ---- Safe load for discriminator ----
+            disc_ckpt_path = os.path.join(checkpoint_path, self.args.model_2_name)
+            disc_tensors = load_file(disc_ckpt_path)
+            disc_state = self.accelerator.unwrap_model(self.discriminator).state_dict()
+            disc_filtered = {k: v for k, v in disc_tensors.items() if k in disc_state and disc_state[k].shape == v.shape}
+            self.accelerator.unwrap_model(self.discriminator).load_state_dict(disc_filtered, strict=False)
+            self.logger.info(
+                f"Loaded {len(disc_filtered)} compatible tensors into discriminator from {disc_ckpt_path}. Skipped {len(disc_tensors) - len(disc_filtered)} incompatible tensors."
             )
-            self.logger.info("Loaded model weights for finetune.")
 
         else:
             raise ValueError("Resume_type must be `resume` or `finetune`.")

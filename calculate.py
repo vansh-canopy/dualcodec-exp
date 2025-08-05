@@ -207,7 +207,7 @@ def load_model():
         encoder_dim=32,
         encoder_rates=[4, 5, 6, 8, 2],
         decoder_dim=1536,
-        decoder_rates=[2, 8, 6, 5, 4],
+        decoder_rates=[8, 2, 4, 5, 6],
         n_codebooks=7,
         codebook_size=4096,
         codebook_dim=8,

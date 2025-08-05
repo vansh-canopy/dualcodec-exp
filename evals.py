@@ -21,31 +21,18 @@ def load_audio(path: str, required_sr: int = 24000) -> torch.Tensor:
 
     
     
-def load_models():
-    # base_id = "12hz_v1"
-    # base_model = dualcodec.get_model(base_id)
-    # base_inference = dualcodec.Inference(dualcodec_model=base_model)
-    
-    # MODELS: list[tuple[str, dualcodec.Inference]] = [("jianqi_dualcodec", base_inference)]
-    
+def load_models():    
     MODELS: list[tuple[str, dualcodec.Inference]] = []
     
-    my_model_path = "hf://vanshjjw/vansh-dualcodec-step-1.030"
-    my_model = dualcodec.get_model(base_id, my_model_path, name="model.safetensors")
-    my_inference = dualcodec.Inference(dualcodec_model=my_model)
-    MODELS.append(("vansh_dualcodec", my_inference))
-    
-    print(f"my_model: {my_model}")
-    exit()
-    
     DIRECTORY_TO_LOAD_FROM = pathlib.Path("/home/vansh/dualcodec-vansh/averaged_models")
-
+    BASE_ID = "12hz_v2"
+    
     for path in sorted(DIRECTORY_TO_LOAD_FROM.glob("*.safetensors")):
-        filename = path.name  # e.g. averaged_model_step_0795000_decay_0.9.safetensors
-        model = dualcodec.get_model(base_id, str(DIRECTORY_TO_LOAD_FROM), name=filename)
-        inference_model = dualcodec.Inference(dualcodec_model=model)
+        filename = path.name 
+        model = dualcodec.get_model(BASE_ID, str(DIRECTORY_TO_LOAD_FROM), name=filename, strict=True)
+        inference_model = dualcodec.InferenceWhisper(dualcodec_model=model)
         MODELS.append((filename, inference_model))
-
+    
     return MODELS
 
 

@@ -119,11 +119,7 @@ class InferenceWhisper:
             audio_len_in_s = audio.shape[-1] / sr
             num_latents_to_keep = int(50 * audio_len_in_s)
             features = features[:,:,:num_latents_to_keep]
-            
-            print(f"audio.shape in encode: {audio.shape}")
-            print(f"features.shape after: {features.shape}")
-            
-            
+
             features = torch.nn.functional.avg_pool1d(
                 features,
                 self.model.semantic_downsample_factor,

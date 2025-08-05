@@ -165,7 +165,7 @@ class Trainer(BaseTrainer):
             
             # Wave 2 Vec produces the right number of latents (50/s)
             # So does whisper but because openai is a bitch, they pad the latents upto 1500
-            # quick hack to drop padded whisper latents
+            # JANK ALERT
             
             sr = 24000 
             audio_len_in_s = audio_lengths[0].item() / sr

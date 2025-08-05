@@ -6,7 +6,7 @@ model:
   decoder_rates: [2,8,6,5,4]
   encoder_dim: 32
   decoder_dim: 1536
-  n_codebooks: 7
+  n_codebooks: 2
   quantizer_dropout: 1.0
   codebook_size: 4096
   semantic_codebook_size: 16384

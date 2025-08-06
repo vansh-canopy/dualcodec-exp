@@ -3,17 +3,18 @@ from pathlib import Path
 from safetensors.torch import load_file, save_file
 
 
-CHECKPOINT_DIR  = "/home/vansh/dualcodec-exp/output_checkpoints/dualcodec_baseline_12hz_16384_4096_8vq/checkpoints/" 
+CHECKPOINT_DIR  = "/home/vansh/dualcodec-exp/output_checkpoints_3/dualcodec_25hzv1_finetune_3_all_params/checkpoint"
+
 OUTPUT_DIR = "/home/vansh/dualcodec-exp/averaged_models/"   
-PREFIX = "epoch-0000_step-"  
-DEVICE = "cuda"
+PREFIX = "epoch-0009"  
+DEVICE = "cuda:3"
 
 LAST_K_STEPS = 10 
-DECAY_RATES = [0.9]
+DECAY_RATES = [0.9, 0.95, 0.99]
 
 # Only consider checkpoints whose training step falls within this range (inclusive)
-MIN_STEP = 695000         # lower bound; change as needed
-MAX_STEP = 895000         # upper bound; change as needed                       
+MIN_STEP = 40000         # lower bound; change as needed
+MAX_STEP = 74000         # upper bound; change as needed                       
 
 ROOT = Path(CHECKPOINT_DIR).expanduser().resolve()
 STEP_REGEX = re.compile(r"step-([0-9]*\.?[0-9]+)")  
@@ -51,7 +52,7 @@ def main():
     print(f"Found {len(checkpoints)} ckpts, using {len(chosen)} by recency")
     
     for DECAY in DECAY_RATES:
-        out_file = f"{OUTPUT_DIR}/averaged_model_step_0{MAX_STEP}_decay_{DECAY}.safetensors"
+        out_file = f"{OUTPUT_DIR}/exp_3_step_{MAX_STEP}_last_{LAST_K_STEPS}_decay_{DECAY}.safetensors"
         aver_state = {}
         for _, path in chosen:
             sd = load_file(path, device=DEVICE)

@@ -75,25 +75,17 @@ for p in wav_paths:
 
 
 with torch.no_grad():
-    for i,audio in enumerate(samples):
-        
-        if wav_paths[i] != "audio_samples/luna.wav":
-            continue
-        
+    for i,audio in enumerate(samples[1:2]):
         audio = audio.reshape(1,1,-1)
         audio = audio.to(DEVICE).float()
-        print(f"[HELP] audio input dtype before encode: {audio.dtype}")
         
         sem1, acu1 = inference_enc_quan_frozen.encode(audio, n_quantizers=3)
-        print(f"[HELP] sem1 dtype: {sem1.dtype}, acu1 dtype: {acu1.dtype}")
         
         audio_decoded_1 = inference_enc_quan_frozen.decode(sem1, acu1)
-        print(f"[HELP] decoded_1 dtype (device): {audio_decoded_1.dtype}")
         audio_decoded_1 = audio_decoded_1.squeeze(0).cpu()
         torchaudio.save(f"audio_decoded_1.wav", audio_decoded_1, 24000)
         
         audio_decoded_2 = inference_base.decode(sem1, acu1)
-        print(f"[HELP] decoded_2 dtype (device): {audio_decoded_2.dtype}")
         audio_decoded_2 = audio_decoded_2.squeeze(0).cpu()
         torchaudio.save(f"audio_decoded_2.wav", audio_decoded_2, 24000)
         

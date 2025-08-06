@@ -1,5 +1,5 @@
 
 w2v_path: ./w2v-bert-2.0
 ckpt_root_path: ./dualcodec_ckpts
-log_dir: ./output_checkpoints_1
+log_dir: ./output_checkpoints_4
 init_model_path: ./dualcodec_ckpts

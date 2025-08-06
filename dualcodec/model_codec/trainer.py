@@ -93,7 +93,6 @@ class Trainer(BaseTrainer):
                 
 
     @torch.no_grad()
-    @torch.cuda.amp.autocast()
     def _extract_semantic_code(self, input_features, attention_mask):
         vq_emb = self.cfg.semantic_model["model"](
             input_features=input_features,

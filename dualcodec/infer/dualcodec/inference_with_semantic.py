@@ -147,22 +147,27 @@ class Inference:
         input_features = inputs["input_features"][0]
         attention_mask = inputs["attention_mask"][0]
 
-        input_features = input_features.unsqueeze(0).to(self.device)
-        attention_mask = attention_mask.unsqueeze(0).to(self.device)
-        audio = audio.to(self.device)
+        input_features = input_features.unsqueeze(0).to(self.device).float()
+        attention_mask = attention_mask.unsqueeze(0).to(self.device)  # int mask
+        audio = audio.to(self.device).float()
 
-        # by default, we use autocast for semantic feature extraction
-        with torch.autocast(device_type=self.device, dtype=torch.float16):
+        # Debug: verify dtypes are float32
+        print(f"[ENCODE] audio dtype: {audio.dtype}, input_features dtype: {input_features.dtype}")
+
+        # Disable autocast to guarantee FP32 through the semantic branch
+        with torch.autocast(device_type=self.device, enabled=False):
             feat = self._extract_semantic_code(
                 input_features, attention_mask
-            ).transpose(1, 2)
+            ).transpose(1, 2).float()
 
             feat = torch.nn.functional.avg_pool1d(
                 feat,
                 self.model.semantic_downsample_factor,
                 self.model.semantic_downsample_factor,
             )
+            print(f"[ENCODE] semantic feat dtype after pool: {feat.dtype}")
 
+        # We already ensure tensors are float32; keep option to run fp16 if explicitly requested.
         if self.autocast:
             ctx = torch.autocast(device_type=self.device, dtype=torch.float16)
         else:
@@ -172,6 +177,7 @@ class Inference:
             semantic_codes, acoustic_codes = self.model.encode(
                 audio, num_quantizers=n_quantizers, semantic_repr=feat
             )
+        print(f"[ENCODE] semantic_codes dtype: {semantic_codes.dtype}, acoustic_codes dtype: {acoustic_codes.dtype}")
 
         return semantic_codes, acoustic_codes
 
@@ -190,6 +196,7 @@ class Inference:
         audio = self.model.decode_from_codes(semantic_codes, acoustic_codes).to(
             torch.float32
         )
+        print(f"[DECODE] output audio dtype: {audio.dtype}")
         return audio
 
     @torch.no_grad()
@@ -204,6 +211,7 @@ class Inference:
         audio = self.model.decode_from_codes(semantic_codes, acoustic_codes).to(
             torch.float32
         )
+        print(f"[DECODE] output audio dtype: {audio.dtype}")
         return audio
 
     @torch.no_grad()

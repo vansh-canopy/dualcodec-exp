@@ -1,0 +1,11 @@
+exp_1_step_76600_last_10_decay_0.9.safetensors: MelSpecLoss = 2.3400, SISDR = -6.9832, STFT_loss = 3.1952, VisQOL = 2.8786
+exp_1_step_76600_last_10_decay_0.95.safetensors: MelSpecLoss = 2.3447, SISDR = -7.1772, STFT_loss = 3.1978, VisQOL = 2.8677
+exp_1_step_76600_last_10_decay_0.99.safetensors: MelSpecLoss = 2.3522, SISDR = -7.1289, STFT_loss = 3.2019, VisQOL = 2.8535
+
+exp_2_step_58400_last_10_decay_0.9.safetensors: MelSpecLoss = 2.4089, SISDR = -8.6138, STFT_loss = 3.3330, VisQOL = 2.8183
+exp_2_step_58400_last_10_decay_0.95.safetensors: MelSpecLoss = 2.4066, SISDR = -8.5905, STFT_loss = 3.3260, VisQOL = 2.8107
+exp_2_step_58400_last_10_decay_0.99.safetensors: MelSpecLoss = 2.4085, SISDR = -8.5582, STFT_loss = 3.3196, VisQOL = 2.8003
+
+exp_3_step_74000_last_10_decay_0.9.safetensors: MelSpecLoss = 2.4320, SISDR = -9.9470, STFT_loss = 3.4312, VisQOL = 2.7057
+exp_3_step_74000_last_10_decay_0.95.safetensors: MelSpecLoss = 2.4346, SISDR = -10.1855, STFT_loss = 3.4459, VisQOL = 2.6843
+exp_3_step_74000_last_10_decay_0.99.safetensors: MelSpecLoss = 2.4386, SISDR = -10.3965, STFT_loss = 3.4561, VisQOL = 2.6605

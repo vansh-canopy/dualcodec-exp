@@ -290,9 +290,31 @@ class Trainer(BaseTrainer):
             total_loss += distill_loss * self.cfg.lambda_distill_loss
         else:
             distill_loss = 0.0
-
-        self.optimizer.zero_grad()
+        
+        
+        
+        self.optimizer.zero_grad()        
         self.accelerator.backward(total_loss)
+
+        # ---- Gradient Debug: compare encoder and quantizer gradients ----
+        if getattr(self, '_grad_debug_freq', None) is None:
+            self._grad_debug_freq = 100  # default frequency
+        if self.step % self._grad_debug_freq == 0:
+            enc_grads = [p.grad.detach().float() for p in self.model_module.dac.encoder.parameters() if p.grad is not None]
+            quan_grads = [p.grad.detach().float() for p in self.model_module.dac.quantizer.parameters() if p.grad is not None]
+            def summarize(gs):
+                if not gs:
+                    return 'None'
+                flat = torch.cat([g.view(-1) for g in gs])
+                return f'mean={flat.mean().item():.3e}, std={flat.std().item():.3e}, max={flat.abs().max().item():.3e}'
+            print(f"[GradDebug step {self.step}] encoder {summarize(enc_grads)} | quantizer {summarize(quan_grads)}")
+            if enc_grads and quan_grads:
+                enc_flat = torch.cat([g.view(-1) for g in enc_grads])
+                quan_flat = torch.cat([g.view(-1) for g in quan_grads])
+                min_len = min(enc_flat.numel(), quan_flat.numel())
+                diff = (enc_flat[:min_len] - quan_flat[:min_len]).abs().mean()
+                print(f"[GradDebug step {self.step}] mean|enc-grad - quan-grad| = {diff.item():.3e}")
+        
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
         self.optimizer.step()
 

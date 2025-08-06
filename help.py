@@ -36,32 +36,32 @@ model_2 = dualcodec.get_model(MODEL_ID, path, name=name_frozen, strict=False)
 model_2.eval()
 inference_2 = dualcodec.Inference(dualcodec_model=model_2, device=DEVICE, autocast=False)
 
-path = "/home/vansh/dualcodec-exp/output_checkpoints_2/dualcodec_25hzv1_finetune_2/checkpoint/epoch-0018_step-0097800_loss-55.091476-dualcodec_25hzv1_finetune_2/"
-name_frozen = "model.safetensors"
+# path = "/home/vansh/dualcodec-exp/output_checkpoints_2/dualcodec_25hzv1_finetune_2/checkpoint/epoch-0018_step-0097800_loss-55.091476-dualcodec_25hzv1_finetune_2/"
+# name_frozen = "model.safetensors"
 
-model_enc_quan_frozen = dualcodec.get_model(MODEL_ID, path, name=name_frozen, strict=False)
-model_enc_quan_frozen.eval()
-inference_enc_quan_frozen = dualcodec.Inference(dualcodec_model=model_enc_quan_frozen, device=DEVICE, autocast=False)
+# model_enc_quan_frozen = dualcodec.get_model(MODEL_ID, path, name=name_frozen, strict=False)
+# model_enc_quan_frozen.eval()
+# inference_enc_quan_frozen = dualcodec.Inference(dualcodec_model=model_enc_quan_frozen, device=DEVICE, autocast=False)
 
 
-def compare_state_dicts(sd1, sd2, module_name=""):
-    all_close = True
-    for (k1, v1), (k2, v2) in zip(sd1.items(), sd2.items()):
-        if k1 != k2:
-            print(f"[{module_name}] Key mismatch: {k1} vs {k2}")
-            continue
+# def compare_state_dicts(sd1, sd2, module_name=""):
+#     all_close = True
+#     for (k1, v1), (k2, v2) in zip(sd1.items(), sd2.items()):
+#         if k1 != k2:
+#             print(f"[{module_name}] Key mismatch: {k1} vs {k2}")
+#             continue
         
-        diff = torch.abs(v1 - v2)
-        maximum = torch.max(diff)
-        print(f"[{module_name}] {k1} difference: {maximum}")
+#         diff = torch.abs(v1 - v2)
+#         maximum = torch.max(diff)
+#         print(f"[{module_name}] {k1} difference: {maximum}")
             
-    if all_close:
-        print("All weights are identical")
+#     if all_close:
+#         print("All weights are identical")
 
-compare_state_dicts(model_2.dac.encoder.state_dict(), model_enc_quan_frozen.dac.encoder.state_dict(), "Encoder")
-compare_state_dicts(model_2.dac.quantizer.state_dict(), model_enc_quan_frozen.dac.quantizer.state_dict(), "Quantizer")
-compare_state_dicts(model_2.convnext_encoder.state_dict(), model_enc_quan_frozen.convnext_encoder.state_dict(), "ConvNextEncoder")
-compare_state_dicts(model_2.semantic_vq.state_dict(), model_enc_quan_frozen.semantic_vq.state_dict(), "SemanticQuantizer")
+# compare_state_dicts(model_2.dac.encoder.state_dict(), model_enc_quan_frozen.dac.encoder.state_dict(), "Encoder")
+# compare_state_dicts(model_2.dac.quantizer.state_dict(), model_enc_quan_frozen.dac.quantizer.state_dict(), "Quantizer")
+# compare_state_dicts(model_2.convnext_encoder.state_dict(), model_enc_quan_frozen.convnext_encoder.state_dict(), "ConvNextEncoder")
+# compare_state_dicts(model_2.semantic_vq.state_dict(), model_enc_quan_frozen.semantic_vq.state_dict(), "SemanticQuantizer")
 
 # print(torch.finfo(torch.float32).eps)
 
@@ -80,37 +80,46 @@ for p in wav_paths:
 
 
 with torch.no_grad():
-    for i,audio in enumerate(samples[:1]):
+    for i,audio in enumerate(samples):
+        
+        if "luna" not in wav_paths[i]:
+            print("skip")
+            continue
+        
+        print(wav_paths[i])
+        
         audio = audio.reshape(1,1,-1)
         audio = audio.to(DEVICE).float()
         
-        # sem1, acu1 = inference_enc_quan_frozen.encode(audio, n_quantizers=3)
-        
-        # audio_decoded_1 = inference_enc_quan_frozen.decode(sem1, acu1)
-        # audio_decoded_1 = audio_decoded_1.squeeze(0).cpu()
-        # torchaudio.save(f"audio_decoded_1.wav", audio_decoded_1, 24000)
-        
-        # audio_decoded_2 = inference_base.decode(sem1, acu1)
-        # audio_decoded_2 = audio_decoded_2.squeeze(0).cpu()
-        # torchaudio.save(f"audio_decoded_2.wav", audio_decoded_2, 24000)
-        
-        enc1 = inference_base.model.dac.encoder(audio)
-        enc2 = inference_enc_quan_frozen.model.dac.encoder(audio)
-        print(f"audio name: {wav_paths[i]}")
-        print(f"Encoder latents difference: {enc1 - enc2}")
-
         sem1, acu1 = inference_base.encode(audio, n_quantizers=3)
-        sem2, acu2 = inference_enc_quan_frozen.encode(audio, n_quantizers=3)
         
-        print(F"semantic code difference: {sem1 - sem2}")
+        sem2, acu2 = inference_2.encode(audio, n_quantizers=3)
         
-        print(f"acoustic codes shape: {acu1.shape} and {acu2.shape}")
+        audio_decoded_1 = inference_2.decode(sem1, acu1)
+        audio_decoded_1 = audio_decoded_1.squeeze(0).cpu()
+        torchaudio.save(f"audio_decoded_1.wav", audio_decoded_1, 24000)
         
-        diff_first_code = acu1[:,0,:] - acu2[:,0,:]
-        print(f"first code difference: {diff_first_code}")
+        audio_decoded_2 = inference_2.decode(sem2, acu2)
+        audio_decoded_2 = audio_decoded_2.squeeze(0).cpu()
+        torchaudio.save(f"audio_decoded_2.wav", audio_decoded_2, 24000)
         
-        diff_second_code = acu1[:,1,:] - acu2[:,1,:]
-        print(f"second code difference: {diff_second_code}")
+        # enc1 = inference_base.model.dac.encoder(audio)
+        # enc2 = inference_enc_quan_frozen.model.dac.encoder(audio)
+        # print(f"audio name: {wav_paths[i]}")
+        # print(f"Encoder latents difference: {enc1 - enc2}")
+
+        # sem1, acu1 = inference_base.encode(audio, n_quantizers=3)
+        # sem2, acu2 = inference_enc_quan_frozen.encode(audio, n_quantizers=3)
+        
+        # print(F"semantic code difference: {sem1 - sem2}")
+        
+        # print(f"acoustic codes shape: {acu1.shape} and {acu2.shape}")
+        
+        # diff_first_code = acu1[:,0,:] - acu2[:,0,:]
+        # print(f"first code difference: {diff_first_code}")
+        
+        # diff_second_code = acu1[:,1,:] - acu2[:,1,:]
+        # print(f"second code difference: {diff_second_code}")
         
 
         

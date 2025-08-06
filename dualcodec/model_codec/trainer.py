@@ -20,6 +20,7 @@ from .discriminator import Discriminator
 import torch.nn.functional as F
 from einops import rearrange
 from easydict import EasyDict as edict
+import dualcodec
 
 USE_HINGE_LOSS = False
 from audiotools import AudioSignal
@@ -27,6 +28,14 @@ from audiotools import AudioSignal
 
 class Trainer(BaseTrainer):
     """Trainer"""
+
+    def _log(self, msg: str, level: str = "info"):
+        """Utility: always prints to stdout and logs via self.logger if present."""
+        print(msg)
+        if hasattr(self, "logger") and self.logger is not None:
+            log_fn = getattr(self.logger, level, None)
+            if callable(log_fn):
+                log_fn(msg)
 
     def __init__(self, args=None, cfg=None, **kwargs):
         """
@@ -36,10 +45,23 @@ class Trainer(BaseTrainer):
             args (argparse.Namespace, optional): Arguments to be passed on to the model. Defaults to None.
             cfg (dict, optional): Configuration dictionary containing parameters for the model. Defaults to None.
         """
+        # Early initialization of weight verification attributes so they exist during BaseTrainer.__init__
+        self.weight_check_frequency = 10  # default value; may be overridden later
+        self.max_weight_diff_threshold = 1e-8
+        self.verbose_weight_check = False
+        # store reference snapshots
+        self.ref_encoder_state = None
+        self.ref_quantizer_state = None
+
         super().__init__(args, cfg)
         torch.backends.cudnn.benchmark = True
         # Flag to indicate this trainer handles its own backward passes
         self.codec_trainer_handles_backward = True
+        
+        # Store reference to original model for weight verification
+        self.original_model = None
+        self.max_weight_diff_threshold = getattr(self.cfg, 'max_weight_diff_threshold', 1e-5)  # Maximum allowed weight difference
+        self.verbose_weight_check = getattr(self.cfg, 'verbose_weight_check', False)  # Log detailed weight differences
 
         from .loss import GANLoss, MelSpectrogramLoss, MultibandMelSpectrogramLoss
 
@@ -88,9 +110,12 @@ class Trainer(BaseTrainer):
             m.eval()     
             for p in m.parameters():
                 p.requires_grad = False
-            
-                
-                
+        
+
+                # Snapshot current encoder & quantizer weights as reference
+        self._load_reference_weights()
+        # Verify weights after initialization
+        self._verify_encoder_weights("After initialization")
 
     @torch.no_grad()
     def _extract_semantic_code(self, input_features, attention_mask):
@@ -157,6 +182,141 @@ class Trainer(BaseTrainer):
         Returns: None
         """
         return None
+
+    @torch.no_grad()
+    def _load_reference_weights(self):
+        """Load encoder & quantizer weights from a safetensors checkpoint located in dualcodec_ckpts."""
+        from safetensors.torch import load_file
+        # determine checkpoint path
+        ckpt_dir = getattr(self.cfg, 'reference_ckpt_dir', '/home/vansh/dualcodec-exp/dualcodec_ckpts')
+        ckpt_name = getattr(self.cfg, 'reference_ckpt_name', 'dualcodec_12hz_16384_4096.safetensors')
+        ckpt_path = os.path.join(ckpt_dir, ckpt_name)
+        if not os.path.isfile(ckpt_path):
+            self._log(f"Reference checkpoint {ckpt_path} not found; weight verification disabled", level='warning')
+            self.ref_encoder_state = None
+            self.ref_quantizer_state = None
+            return
+        tensors = load_file(ckpt_path)
+        
+        self._log(f"Loaded reference weights from {ckpt_path}")
+
+        # Extract only encoder parameters from checkpoint
+        enc_state = {}
+        prefix = 'dac.encoder.'
+        for k, v in tensors.items():
+            if k.startswith(prefix):
+                stripped_key = k[len(prefix):]  # remove leading 'dac.encoder.' so keys match state_dict()
+                enc_state[stripped_key] = v.cpu()
+        if len(enc_state) == 0:
+            self._log("Failed to extract reference encoder weights from checkpoint", level='warning')
+        self.ref_encoder_state = enc_state
+        # quantizer comparison removed
+
+
+
+    @torch.no_grad()
+    def _verify_encoder_weights(self, checkpoint_name=""):
+        if self.ref_encoder_state is None or self.ref_quantizer_state is None:
+            return
+        
+        self._log(f"=== Weight Verification {checkpoint_name} ===")
+        
+        current_model = self.model_module if not hasattr(self.model, "module") else self.model.module
+        
+        modules_to_check = [
+            ('dac.encoder', current_model.dac.encoder.state_dict(), self.ref_encoder_state),
+        ]
+        
+        all_weights_match = True
+        
+        for module_name, curr_state, ref_state in modules_to_check:
+            module_matches = self._compare_module_weights(
+                curr_state,
+                ref_state,
+                module_name
+            )
+            if not module_matches:
+                all_weights_match = False
+        
+        if all_weights_match:
+            self._log(f"✓ Encoder & quantizer match reference {checkpoint_name}")
+        else:
+            self._log(f"✗ Weight mismatch detected versus reference {checkpoint_name}")
+        
+        self._log("=" * 50)
+        
+    def _compare_module_weights(self, current_state_dict, original_state_dict, module_name):
+        """
+        Compare weights between current and original module.
+        
+        Returns:
+            bool: True if all weights are within threshold, False otherwise
+        """
+        all_close = True
+        max_diff_overall = 0.0
+        max_diff_param = ""
+        
+        for key in current_state_dict.keys():
+            if key not in original_state_dict:
+                all_close = False
+                continue
+            
+            current_param = current_state_dict[key].detach().cpu()
+            original_param = original_state_dict[key].detach().cpu()
+            
+            # Check shape match
+            if current_param.shape != original_param.shape:
+                self._log(f"[{module_name}] Shape mismatch for {key}: {current_param.shape} vs {original_param.shape}")
+                all_close = False
+                continue
+            
+            # Calculate difference on CPU to avoid device mismatch
+            diff = torch.abs(current_param - original_param)
+            max_diff = torch.max(diff).item()
+            mean_diff = torch.mean(diff).item()
+            
+            if max_diff > max_diff_overall:
+                max_diff_overall = max_diff
+                max_diff_param = f"{module_name}.{key}"
+            
+            # Log if difference exceeds threshold
+            if max_diff > self.max_weight_diff_threshold:
+                self._log(
+                    f"[{module_name}] {key} - Max diff: {max_diff:.2e}, Mean diff: {mean_diff:.2e} - EXCEEDS THRESHOLD"
+                )
+                all_close = False
+            elif self.verbose_weight_check:  # Only log details if verbose
+                self._log(
+                    f"[{module_name}] {key} - Max diff: {max_diff:.2e}, Mean diff: {mean_diff:.2e}"
+                )
+        
+        if max_diff_overall > 0:
+            self._log(f"[{module_name}] Max difference: {max_diff_overall:.2e} in {max_diff_param}")
+        
+        return all_close
+    
+    def _verify_frozen_gradients(self):
+        """Verify that frozen modules have no gradients."""
+
+        current_model = self.model_module
+        if hasattr(self.model, "module"):
+            current_model = self.model.module
+        
+        modules_to_check = [
+            ('dac.encoder', current_model.dac.encoder),
+            ('dac.quantizer', current_model.dac.quantizer),
+            ('semantic_vq', current_model.semantic_vq),
+            ('convnext_encoder', current_model.convnext_encoder),
+        ]
+        
+        for module_name, module in modules_to_check:
+            for param_name, param in module.named_parameters():
+                if param.grad is not None:
+                    grad_norm = torch.norm(param.grad).item()
+                    if grad_norm > 1e-8:  # Small threshold for numerical errors
+                        self._log(
+                            f"[{module_name}] {param_name} has non-zero gradient: {grad_norm:.2e}"
+                        )
 
     def _train_step(self, batch):
         """
@@ -295,28 +455,17 @@ class Trainer(BaseTrainer):
         
         self.optimizer.zero_grad()        
         self.accelerator.backward(total_loss)
-
-        # ---- Gradient Debug: compare encoder and quantizer gradients ----
-        if getattr(self, '_grad_debug_freq', None) is None:
-            self._grad_debug_freq = 100  # default frequency
-        if self.step % self._grad_debug_freq == 0:
-            enc_grads = [p.grad.detach().float() for p in self.model_module.dac.encoder.parameters() if p.grad is not None]
-            quan_grads = [p.grad.detach().float() for p in self.model_module.dac.quantizer.parameters() if p.grad is not None]
-            def summarize(gs):
-                if not gs:
-                    return 'None'
-                flat = torch.cat([g.view(-1) for g in gs])
-                return f'mean={flat.mean().item():.3e}, std={flat.std().item():.3e}, max={flat.abs().max().item():.3e}'
-            print(f"[GradDebug step {self.step}] encoder {summarize(enc_grads)} | quantizer {summarize(quan_grads)}")
-            if enc_grads and quan_grads:
-                enc_flat = torch.cat([g.view(-1) for g in enc_grads])
-                quan_flat = torch.cat([g.view(-1) for g in quan_grads])
-                min_len = min(enc_flat.numel(), quan_flat.numel())
-                diff = (enc_flat[:min_len] - quan_flat[:min_len]).abs().mean()
-                print(f"[GradDebug step {self.step}] mean|enc-grad - quan-grad| = {diff.item():.3e}")
+        
+        # Verify that frozen module gradients are None or zero
+        if self.step % self.weight_check_frequency == 0:
+            self._verify_frozen_gradients()
         
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
         self.optimizer.step()
+        
+        # Periodically verify weights haven't changed
+        if self.step % self.weight_check_frequency == 0:
+            self._verify_encoder_weights(f"Step {self.step}")
 
         # print(commitment_loss, spec_loss)
         # print(x_wav.shape[0])
@@ -361,7 +510,7 @@ class Trainer(BaseTrainer):
                     key=lambda x: int(x.split("_")[-2].split("-")[-1]), reverse=True
                 )
                 checkpoint_path = ls[0]
-                self.logger.info("Resume from {}".format(checkpoint_path))
+                self._log("Resume from {}".format(checkpoint_path))
             except Exception as e:
                 print(
                     "Failed to load checkpoint from {}, starting FROM SCRATCH...".format(
@@ -387,6 +536,8 @@ class Trainer(BaseTrainer):
                     int(Path(checkpoint_path).name.split("_")[1].split("-")[-1]) + 1
                 )
 
+            self._verify_encoder_weights(f"After resuming from {checkpoint_path}")
+
         elif resume_type == "finetune":
             # Load only the model weights
             import safetensors.torch
@@ -399,20 +550,11 @@ class Trainer(BaseTrainer):
             gen_state = self.accelerator.unwrap_model(self.model).state_dict()
             gen_filtered = {k: v for k, v in gen_tensors.items() if k in gen_state and gen_state[k].shape == v.shape}
             self.accelerator.unwrap_model(self.model).load_state_dict(gen_filtered, strict=False)
-            self.logger.info(
+            self._log(
                 f"Loaded {len(gen_filtered)} compatible tensors into generator from {gen_ckpt_path}. Skipped {len(gen_tensors) - len(gen_filtered)} incompatible tensors."
             )
 
-            # ---- Safe load for discriminator ----
-            disc_ckpt_path = os.path.join(checkpoint_path, self.args.model_2_name)
-            disc_tensors = load_file(disc_ckpt_path)
-            disc_state = self.accelerator.unwrap_model(self.discriminator).state_dict()
-            disc_filtered = {k: v for k, v in disc_tensors.items() if k in disc_state and disc_state[k].shape == v.shape}
-            self.accelerator.unwrap_model(self.discriminator).load_state_dict(disc_filtered, strict=False)
-            self.logger.info(
-                f"Loaded {len(disc_filtered)} compatible tensors into discriminator from {disc_ckpt_path}. Skipped {len(disc_tensors) - len(disc_filtered)} incompatible tensors."
-            )
-            
+            self._verify_encoder_weights(f"After loading checkpoint stage 0 from {checkpoint_path}")
 
         else:
             raise ValueError("Resume_type must be `resume` or `finetune`.")
@@ -433,5 +575,12 @@ class Trainer(BaseTrainer):
     def _inference(self):
         pass
 
+    def save_checkpoint(self):
+        """Override to add weight verification after saving."""
+        # Call parent save_checkpoint
+        super().save_checkpoint()
+        
+        self._verify_encoder_weights(f"After saving checkpoint at step {self.step}")
+    
     def test_loop(self):
         return
